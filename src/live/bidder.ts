@@ -103,6 +103,8 @@ export interface AuctionRecord {
 
 export class Bidder {
   readonly records = new Map<bigint, AuctionRecord>();
+  /** Matches where another process was caught bidding as this bot. */
+  private readonly twinWarned = new Set<bigint>();
   private readonly now: () => number;
   private readonly perf: () => number;
 
@@ -291,6 +293,16 @@ export class Bidder {
       won: me !== null && r.winnerBotId === me,
       tickDelayMs: round1(closedAt - rec.av.closesAtMs),
     };
+    // Vickrey pays at most our bid and first-price exactly our bid, so a win
+    // above everything this process sent means another process is bidding
+    // as the same bot (two copies running): they overwrite each other's bids.
+    const maxSent = rec.sends.reduce((m, x) => Math.max(m, x.amount), 0);
+    if (rec.result.won && !this.d.transport.dry && rec.result.paid > maxSent && !this.twinWarned.has(rec.matchId)) {
+      this.twinWarned.add(rec.matchId);
+      const msg = `ANOTHER COPY OF THIS BOT IS RUNNING: won '${rec.letter}' at ${rec.result.paid} but this process bid at most ${maxSent}. Stop every other copy (yours or a teammate's): two copies overwrite each other's bids.`;
+      this.d.log("twin", { match: rec.matchId, auction: rec.auctionId, paid: rec.result.paid, maxSent });
+      this.d.human(`${"!".repeat(20)} ${msg}`);
+    }
     this.maybeWrite(rec);
     setTimeout(() => this.write(rec), this.d.opts.flushAfterMs).unref?.();
   }

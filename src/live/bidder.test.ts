@@ -208,3 +208,26 @@ test("bidder: a zero refinement withdraws the quick bid", async () => {
     [6, 0],
   );
 });
+
+test("bidder: a win above everything we bid flags another copy of the bot, once per match", async () => {
+  const h = harness({ quickBid: () => 4, refineBid: () => null });
+  h.bidder.onOpen(auction(31n, 1_000_000 - 90), 1_000_000, true);
+  await tick();
+  h.bidder.onResult(result(31n, 1_000_000 + 912, 42n, 18), 1_000_000 + 1000, true);
+  h.bidder.onOpen(auction(32n, 1_000_000 + 1000), 1_000_000 + 1000, true);
+  await tick();
+  h.bidder.onResult(result(32n, 1_000_000 + 1912, 42n, 25), 1_000_000 + 2000, true);
+  await tick();
+  const twins = h.logs.filter((l) => l.type === "twin");
+  assert.equal(twins.length, 1, "warned once for the match");
+  assert.deepEqual({ paid: twins[0]!.rec.paid, maxSent: twins[0]!.rec.maxSent }, { paid: 18, maxSent: 4 });
+});
+
+test("bidder: a normal Vickrey win (paid <= our bid) is not flagged", async () => {
+  const h = harness({ quickBid: () => 12, refineBid: () => null });
+  h.bidder.onOpen(auction(33n, 1_000_000 - 90), 1_000_000, true);
+  await tick();
+  h.bidder.onResult(result(33n, 1_000_000 + 912, 42n, 9), 1_000_000 + 1000, true);
+  await tick();
+  assert.equal(h.logs.filter((l) => l.type === "twin").length, 0);
+});

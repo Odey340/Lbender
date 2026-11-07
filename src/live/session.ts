@@ -14,6 +14,8 @@ import { Bidder, type BidderOptions, type BidTransport } from "./bidder.js";
 import { BusyTracker, ClockSync } from "./clock.js";
 import { errMsg, type DecisionLog } from "./log.js";
 import { Telemetry } from "../backend/telemetry.js";
+import { WRITER_TOKEN_PATH } from "../backend/client.js";
+import { existsSync } from "node:fs";
 import { tournamentContext } from "../brain/tournament.js";
 import {
   ALL_RACK,
@@ -251,6 +253,13 @@ export class Session {
     // DAMO_STDB_DB at a throwaway database and set DAMO_TELEMETRY=force).
     const env = process.env.DAMO_TELEMETRY;
     if (env === "0" || (this.o.dryRun && env !== "force")) return;
+    // The backend is a private server of K-13's authors: without its writer
+    // token every connect fails and warns forever. Off unless the token is
+    // there (or DAMO_TELEMETRY=1/force insists).
+    if (env !== "1" && env !== "force" && !existsSync(WRITER_TOKEN_PATH)) {
+      this.o.log.human("telemetry off (no backend writer token; not needed to play)");
+      return;
+    }
     try {
       const t = new Telemetry({ onError: (m) => this.o.log.warn(m) });
       this.telemetry = t;
