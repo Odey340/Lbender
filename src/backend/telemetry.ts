@@ -1,4 +1,4 @@
-// Live bot telemetry into K-13's backend: every decision-log record goes to
+// Live bot telemetry into Damo's backend: every decision-log record goes to
 // k13_event (lossless, via createEventSink), and the records the monitor
 // needs are also projected into typed tables: `auction` -> k13_decision,
 // `word` -> k13_word, `match_end` -> k13_match, plus a k13_status heartbeat.
@@ -224,7 +224,7 @@ export interface TelemetryHandle {
 /**
  * The one-call hook for a live bot: taps `log` so every record also goes to
  * the k13 backend, and sends `status()` as a heartbeat every `heartbeatMs`.
- * Never throws and never blocks; with K13_TELEMETRY=0, or when the sink can't
+ * Never throws and never blocks; with DAMO_TELEMETRY=0, or when the sink can't
  * be built, it returns a no-op handle and the bot runs on its JSONL log alone.
  *
  *   const tel = attachTelemetry(log, () => ({ state, currentMatch, latencyMs, clockOffsetMs, version }));
@@ -236,7 +236,7 @@ export function attachTelemetry(
   o: TelemetryOptions & { heartbeatMs?: number } = {},
 ): TelemetryHandle {
   const noop: TelemetryHandle = { telemetry: null, close: async () => {} };
-  if (process.env.K13_TELEMETRY === "0") return noop;
+  if (process.env.DAMO_TELEMETRY === "0") return noop;
   let t: Telemetry;
   try {
     t = new Telemetry({ ...o, onError: o.onError ?? ((m) => log.warn(m)) });

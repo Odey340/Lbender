@@ -1,4 +1,4 @@
-# The brain: K-13's strategy
+# The brain: Damo's strategy
 
 `createAgent({ params?, mode?, seed?, model? })` in `index.ts` returns the
 `palace` agent (`agent.ts`; 'palace' is the strategy's internal id, after
@@ -80,7 +80,7 @@ seed replays exactly); `mode: 'live'` samples against time budgets.
 ## More thinking time (compute vs strength)
 
 Measured with `src/brain/eval.ts --settings table
---table clone:59,clone:22,clone:67,clone:60,clone:120 --seed 1` (6 seats: K-13
+--table clone:59,clone:22,clone:67,clone:60,clone:120 --seed 1` (6 seats: Damo
 against five calibrated clones of real ladder bots; same deals for every
 level, so differences are paired by deal; 95% intervals). Sim mode, so these
 are sample counts, not time.
@@ -116,7 +116,7 @@ with `--variant 'name={"refineSamplesSim":96}'` (3.7x slower) to match live.
 Decision: `liveCompute` (live mode only: refineBid samples by time up to
 maxSamples x liveCompute; sim ignores it and replays exactly, see
 agent.test.ts) stays **1 = off** by default. Turn it on for a run with
-`K13_PARAMS='{"liveCompute":16}'` (or in data/params.json).
+`DAMO_PARAMS='{"liveCompute":16}'` (or in data/params.json).
 
 Timing (live dry runs against maincloud, anonymous, `src/bot.ts --dry-run`,
 ~3 minutes each, while evals ran niced on the same machine):
@@ -186,7 +186,7 @@ Value sweep at 11 seats (same deals): 0.7 gives place 1.72 (Δ -1.95 ±0.26),
 evidence at every size from 7 to 11, and earlier experiments found 0.6
 harmful at 8 seats and 0.8 harmful heads-up against uncalibrated clones.
 Why it works: with 7+ bots the market clears at 25-40 a tile from the start,
-the 6-seat-tuned lambda kept K-13 waiting for bargains that never came, and
+the 6-seat-tuned lambda kept Damo waiting for bargains that never came, and
 it ended with the most unspent coins at the table.
 
 **stageAware (stage objectives)** - base is v2 (`stageAware` 0), same deals:
@@ -204,13 +204,13 @@ it ended with the most unspent coins at the table.
 
 Decision: **stageAware stays OFF**. It never improved survival or Swiss
 points, and in the Bracket it gives up 4 points of score (the tiebreak for a
-tie at last place) by fading the rival term once K-13 looks safe. In the Final
+tie at last place) by fading the rival term once Damo looks safe. In the Final
 it is provably inert while `riskCoef` is 0: heads-up, `placeView` already
 weighs the one rival's points 1:1 against mine (maximise my margin, which is
 what the series total rewards), and the series lead only moves `tilt`, which
-only `riskCoef` reads. Heads-up K-13 won every series against the top clones
+only `riskCoef` reads. Heads-up Damo won every series against the top clones
 (a FINAL_GAMES-game series is 3 x 88 auctions), so the Final is not where the
-simulator shows a weakness; the earlier self-play finding (K-13 vs K-13
+simulator shows a weakness; the earlier self-play finding (Damo vs Damo
 games snowball, margins 144-330) says the real Final will be decided by early
 tempo, which no param here changes.
 
@@ -224,7 +224,7 @@ quickBid at most 2.8 ms, refineBid at most 103 ms, chooseWords at most 40 ms,
 **Caveats.** All of this is against clones. Calibration found the
 simulated field still too easy for v2 at 6 seats (sim place 1.1-1.3 vs 2.81
 live), because clones overspend early and leave cheap tiles late. That bias
-favours a thrifty K-13, so the real-play case for spending earlier at big
+favours a thrifty Damo, so the real-play case for spending earlier at big
 tables is, if anything, stronger. Absolute numbers (wins, margins) are
 optimistic; the paired deltas are the signal.
 

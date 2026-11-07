@@ -1,4 +1,4 @@
-// Full local tournament rehearsal on K-13's own SpacetimeDB (127.0.0.1:3013).
+// Full local tournament rehearsal on Damo's own SpacetimeDB (127.0.0.1:3013).
 //
 //   npx tsx scripts/rehearse/run.ts --tree <bot tree> [--swiss 2] [--cut 3] [--size 4]
 //       [--auction Vickrey|FirstPrice] [--fillers clone:59,clone:12,...] [--rack 5]
@@ -7,7 +7,7 @@
 //
 // What it does, in order:
 //   1. Copies the real game module (the upstream scrabblebot repo's
-//      spacetimedb/, from K13_UPSTREAM, default ../scrabblebot/spacetimedb) to a
+//      spacetimedb/, from DAMO_UPSTREAM, default ../scrabblebot/spacetimedb) to a
 //      work dir, empties its hardcoded seed-admin list (the only change; it is
 //      what lets bootstrap_admin work on a fresh database), and publishes it as
 //      a fresh database `sbrehearsal*` with a scratch CLI config that has its
@@ -16,20 +16,20 @@
 //      (rack size, auction length, a lobby too big for the entrants to fill so
 //      no casual match starts by itself), creates the tournament.
 //   3. One fresh human identity per team: create_team + mint_credential_nonce.
-//   4. Launches K-13 from --tree (nice 5) and every filler from --filler-tree
+//   4. Launches Damo from --tree (nice 5) and every filler from --filler-tree
 //      (same bot code, --agent <spec>, nice 15) with BOT_NONCE, telemetry OFF.
-//      Fillers register with TOURNAMENT_ID; K-13 too unless --register auto.
+//      Fillers register with TOURNAMENT_ID; Damo too unless --register auto.
 //   5. Starts the tournament once everyone is registered, starts each finals
 //      match (start_next_finals_match) until a champion, and reports every
-//      stage, K-13's results, deadline misses, refusals, crashes, stalls.
+//      stage, Damo's results, deadline misses, refusals, crashes, stalls.
 //   6. Tears down: kills only the process groups it spawned, deletes the
 //      database, removes its replica dir and the token files it caused.
 //
 // Output: <out>/report.md, <out>/summary.json, <out>/<bot>/ (bot logs).
 //
-// Env: K13_UPSTREAM (upstream game module dir), SPACETIME_BIN (default
-// ~/.local/bin/spacetime), K13_STDB_DATA (the local server's data dir,
-// default ~/.local/share/k13/stdb), K13_PROTECTED_TREES (colon-separated bot
+// Env: DAMO_UPSTREAM (upstream game module dir), SPACETIME_BIN (default
+// ~/.local/bin/spacetime), DAMO_STDB_DATA (the local server's data dir,
+// default ~/.local/share/k13/stdb), DAMO_PROTECTED_TREES (colon-separated bot
 // trees the kit must never launch from, e.g. the deployed bot's directory).
 
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
@@ -40,14 +40,14 @@ import { setGlobalLogLevel, type Identity } from "spacetimedb";
 import { DbConnection } from "../../src/module_bindings/index.js";
 
 const REPO = path.join(import.meta.dirname, "..", "..");
-const UPSTREAM = process.env.K13_UPSTREAM
-  ? path.resolve(process.env.K13_UPSTREAM)
+const UPSTREAM = process.env.DAMO_UPSTREAM
+  ? path.resolve(process.env.DAMO_UPSTREAM)
   : path.join(REPO, "..", "scrabblebot", "spacetimedb");
 const SPACETIME = process.env.SPACETIME_BIN ?? path.join(os.homedir(), ".local", "bin", "spacetime");
 const HOST = "127.0.0.1:3013";
 const URI = `http://${HOST}`;
-const REPLICAS = path.join(process.env.K13_STDB_DATA ?? path.join(os.homedir(), ".local", "share", "k13", "stdb"), "replicas");
-const PROTECTED_TREES = (process.env.K13_PROTECTED_TREES ?? "").split(":").filter(Boolean).map((t) => path.resolve(t));
+const REPLICAS = path.join(process.env.DAMO_STDB_DATA ?? path.join(os.homedir(), ".local", "share", "k13", "stdb"), "replicas");
+const PROTECTED_TREES = (process.env.DAMO_PROTECTED_TREES ?? "").split(":").filter(Boolean).map((t) => path.resolve(t));
 const DEFAULT_FILLERS = "clone:59,clone:12,clone:67,clone:45,clone:102,clone:115,clone:69";
 
 // ---------- args ----------
@@ -276,8 +276,8 @@ function launch(b: BotRun, a: Args, nonce: string, tournamentId: bigint) {
     BOT_NAME: b.name,
     BOT_NONCE: nonce,
     PALACE_LOG_DIR: b.logDir,
-    K13_TELEMETRY: "0",
-    K13_REHEARSAL: "1",
+    DAMO_TELEMETRY: "0",
+    DAMO_REHEARSAL: "1",
   };
   delete env.BOT_TOKEN;
   delete env.TOURNAMENT_ID;
@@ -328,7 +328,7 @@ async function killAll(bots: BotRun[]) {
   }
 }
 
-// ---------- K-13 log analysis ----------
+// ---------- Damo log analysis ----------
 
 interface K13Stats {
   auctions: number;
@@ -586,7 +586,7 @@ async function main() {
 
     // 4. launch
     for (const b of bots) launch(b, a, nonces.get(b.name)!, tid);
-    say(`launched ${bots.length} bots (K-13 registers via ${a.register === "tid" ? "TOURNAMENT_ID" : "its own auto-registration"})`);
+    say(`launched ${bots.length} bots (Damo registers via ${a.register === "tid" ? "TOURNAMENT_ID" : "its own auto-registration"})`);
     const regAt = new Map<string, number>();
     const regEnd = Date.now() + a.regTimeoutS * 1000;
     for (;;) {
@@ -644,7 +644,7 @@ async function main() {
         const seats = [...conn.db.matchParticipant.mpByMatch.filter(tm.matchId)].map((p) => nameOf(p.botId));
         say(`match ${tm.matchId} started: ${tm.phase.tag} round ${tm.round}, ${seats.length} seats: ${seats.join(", ")}`);
         if (!seats.includes(k13.name) && [...conn.db.tournamentEntry.iter()].some((e) => e.botId === k13.botId && !e.eliminated)) {
-          if (tm.phase.tag === "Swiss") say(`note: K-13 not at this table`);
+          if (tm.phase.tag === "Swiss") say(`note: Damo not at this table`);
         }
       }
       // Ended tournament matches.
@@ -672,12 +672,12 @@ async function main() {
         if (tm.phase.tag === "Final" && me) {
           const opp = seats.find((s) => !s.k13);
           finalDiff += me.score - (opp?.score ?? 0);
-          extra = ` | final game ${tm.round}: K-13 ${me.score} vs ${opp?.score}, running diff ${finalDiff >= 0 ? "+" : ""}${finalDiff}`;
+          extra = ` | final game ${tm.round}: Damo ${me.score} vs ${opp?.score}, running diff ${finalDiff >= 0 ? "+" : ""}${finalDiff}`;
         }
         say(
           `match ${tm.matchId} ended (${tm.phase.tag} r${tm.round}, ${auctions} auctions, ${durationS.toFixed(0)} s): ` +
             seats.map((s) => `${s.place}. ${s.name} ${s.score}`).join(", ") +
-            (me ? ` | K-13 place ${me.place}/${seats.length}, ${k13Words7} words of 7+` : "") +
+            (me ? ` | Damo place ${me.place}/${seats.length}, ${k13Words7} words of 7+` : "") +
             extra,
         );
         if (tm.phase.tag === "Swiss") {
@@ -745,15 +745,15 @@ async function main() {
     const champion = t?.winnerBotId !== undefined ? nameOf(t.winnerBotId) : null;
     const k13Entry = entries.find((e) => e.botId === k13.botId);
     say(`tournament ${t?.status.tag}; champion ${champion ?? "-"}; ${Math.round((Date.now() - startAt) / 1000)} s after start`);
-    // K-13 in casual matches after elimination (lobby use)
+    // Damo in casual matches after elimination (lobby use)
     const k13Matches = [...conn.db.matchParticipant.mpByBot.filter(k13.botId!)].map((p) => p.matchId);
     const casualK13 = k13Matches.filter((m) => !seenTm.has(m));
     await sleep(3000); // let bot logs flush
     const stats = analyseK13(k13.logDir);
     for (const m of reports.filter((r) => r.seats.some((s) => s.k13))) {
       const logged = stats.auctionsByMatch[m.matchId] ?? 0;
-      if (!stats.matchStarts.includes(m.matchId)) problem(`K-13 log has no match_start for its tournament match ${m.matchId}`);
-      if (logged < m.auctions) problem(`K-13 logged ${logged} auctions of ${m.auctions} in match ${m.matchId}`);
+      if (!stats.matchStarts.includes(m.matchId)) problem(`Damo log has no match_start for its tournament match ${m.matchId}`);
+      if (logged < m.auctions) problem(`Damo logged ${logged} auctions of ${m.auctions} in match ${m.matchId}`);
     }
     summary = {
       db: a.db,
@@ -804,12 +804,12 @@ function renderReport(s: Record<string, unknown>): string {
   if (tour) lines.push(`Tournament ${tour.id}: ${tour.status}, champion ${tour.champion ?? "-"}.`, "");
   if (k) {
     lines.push(
-      `K-13 (${k.name}, bot ${k.botId}): Swiss points ${k.swissPoints}, total score ${k.totalScore}, finish ${k.finalFinishPosition ?? "-"}, eliminated ${k.eliminated}, final diff ${k.finalDiff}.`,
+      `Damo (${k.name}, bot ${k.botId}): Swiss points ${k.swissPoints}, total score ${k.totalScore}, finish ${k.finalFinishPosition ?? "-"}, eliminated ${k.eliminated}, final diff ${k.finalDiff}.`,
       "",
     );
     const st = k.log as K13Stats;
     lines.push(
-      "## K-13 log",
+      "## Damo log",
       "",
       `- auctions logged ${st.auctions}, deadline misses ${st.misses}, auctions with no bid sent ${st.noSendAuctions}, min slack ${st.minSlackMs} ms, quick p99 ${st.quickMsP99} ms, refine p99 ${st.refineMsP99} ms`,
       `- refused bids: ${JSON.stringify(st.refusedSends)}`,

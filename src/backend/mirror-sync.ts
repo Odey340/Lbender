@@ -1,4 +1,4 @@
-// Keeps K-13's SpacetimeDB backend (`k13`) in step with the miner's SQLite
+// Keeps Damo's SpacetimeDB backend (`k13`) in step with the miner's SQLite
 // working copy. The miner (src/memory/mine.ts) still writes SQLite first
 // (its proven code path, and derive.ts/train.ts work on SQLite); this module
 // pushes every difference to the backend:

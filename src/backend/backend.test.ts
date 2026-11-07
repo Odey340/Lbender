@@ -32,7 +32,7 @@ import {
 } from "./testdb.js";
 
 // Needs k13-stdb.service and the writer token; skip cleanly elsewhere.
-const skip = (await serverUp()) ? false : "integration test: set K13_IT=1 with the local k13 server (127.0.0.1:3013) and a writer token";
+const skip = (await serverUp()) ? false : "integration test: set DAMO_IT=1 with the local k13 server (127.0.0.1:3013) and a writer token";
 
 const ts = (us: number) => new Timestamp(BigInt(us));
 

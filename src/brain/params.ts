@@ -220,8 +220,8 @@ export function sanitize(raw: unknown): Partial<Params> {
   return out as Partial<Params>;
 }
 
-/** K13_PARAMS='{"liveCompute":4}' in the environment (testing a flag in a dry run); bad JSON is ignored. */
-export function envOverrides(raw = process.env.K13_PARAMS): Partial<Params> {
+/** DAMO_PARAMS='{"liveCompute":4}' in the environment (testing a flag in a dry run); bad JSON is ignored. */
+export function envOverrides(raw = process.env.DAMO_PARAMS): Partial<Params> {
   if (!raw) return {};
   try {
     return sanitize(JSON.parse(raw));
@@ -230,7 +230,7 @@ export function envOverrides(raw = process.env.K13_PARAMS): Partial<Params> {
   }
 }
 
-/** Defaults, then data/params.json, then $K13_PARAMS, then `overrides`. */
+/** Defaults, then data/params.json, then $DAMO_PARAMS, then `overrides`. */
 export function resolveParams(overrides: Partial<Params> | Record<string, unknown> = {}): Params {
   return { ...DEFAULT_PARAMS, ...fileOverrides(), ...envOverrides(), ...sanitize(overrides) };
 }

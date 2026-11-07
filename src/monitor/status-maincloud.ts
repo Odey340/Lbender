@@ -1,7 +1,7 @@
-// How is K-13 doing?
+// How is Damo doing?
 //
 //   npx tsx src/monitor/status-maincloud.ts   one snapshot (straight from maincloud + local logs;
-//   src/monitor/status.ts reads K-13's backend instead)
+//   src/monitor/status.ts reads Damo's backend instead)
 //   npm run status -- --watch 30     refresh every 30 s
 //   npm run status -- --json         print the snapshot as JSON
 //
@@ -9,7 +9,7 @@
 // `spacetime sql --anonymous`): rating, +-, provisional, leaderboard rank,
 // matches, wins, rating trend, online or not. Local side (logs/): last 10
 // matches, deadline misses, think times, refusals. Every run also writes
-// logs/status.json. Env: PALACE_BOT_NAME (default 'K-13'),
+// logs/status.json. Env: PALACE_BOT_NAME (default 'Damo'),
 // STDB_HOST, STDB_DB, PALACE_LOG_DIR.
 
 import * as fs from "node:fs";
@@ -21,7 +21,7 @@ import { isProvisional, rankOf, skill, spread, type Rated } from "./rating.js";
 const ROOT = path.join(import.meta.dirname, "..", "..");
 const HOST = process.env.STDB_HOST ?? "https://maincloud.spacetimedb.com";
 const DB = process.env.STDB_DB ?? "scrabblebot";
-const NAME = process.env.PALACE_BOT_NAME ?? "K-13";
+const NAME = process.env.PALACE_BOT_NAME ?? "Damo";
 const LOG_DIR = process.env.PALACE_LOG_DIR ?? path.join(ROOT, "logs");
 
 interface ServerStatus {
@@ -126,7 +126,7 @@ const sign = (x: number | null | undefined) => (x === null || x === undefined ? 
 
 function render(s: ServerStatus, l: LogStats): string {
   const lines: string[] = [];
-  lines.push(`K-13 status  ${new Date().toISOString()}`);
+  lines.push(`Damo status  ${new Date().toISOString()}`);
   lines.push("");
   if (s.error) lines.push(`server: ERROR ${s.error}`);
   if (!s.found) lines.push(`server: no bot named '${s.name}' yet (set PALACE_BOT_NAME?)`);

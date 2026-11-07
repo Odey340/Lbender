@@ -12,7 +12,7 @@ import { sql, type Backend } from "./client.js";
 import { MirrorSync } from "./mirror-sync.js";
 import { connectTestWriter, deleteTestDb, publishTestDb, serverUp, TEST_DB } from "./testdb.js";
 
-const skip = (await serverUp()) ? false : "integration test: set K13_IT=1 with the local k13 server (127.0.0.1:3013) and a writer token";
+const skip = (await serverUp()) ? false : "integration test: set DAMO_IT=1 with the local k13 server (127.0.0.1:3013) and a writer token";
 
 describe("mirror sync", { skip }, () => {
   let writer: Backend;

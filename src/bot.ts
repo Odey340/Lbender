@@ -1,19 +1,19 @@
-// K-13 live bot.
+// Damo live bot.
 //
 //   npm run bot                         play as the bot whose token is in .token-<BOT_NAME>
 //   BOT_TOKEN=<jwt> npm run bot         first run with a token from the team page
 //   BOT_NONCE=<code> npm run bot        first run with a nonce from mint_credential_nonce
 //   TOURNAMENT_ID=<id> npm run bot      also register for that tournament
-//                                       (not needed: K-13 registers for every tournament
-//                                       that opens; K13_AUTO_TOURNAMENT=0 turns that off)
+//                                       (not needed: Damo registers for every tournament
+//                                       that opens; DAMO_AUTO_TOURNAMENT=0 turns that off)
 //   npm run bot -- --agent starter      play the official starter strategy
 //   npm run bot -- --dry-run            follow a live match anonymously; no reducer calls
 //
-// Env: BOT_NAME (default k13; names the token file only), BOT_TOKEN,
+// Env: BOT_NAME (default damo; names the token file only), BOT_TOKEN,
 // BOT_NONCE, TOURNAMENT_ID, STDB_HOST, STDB_DB, PALACE_MARGIN_MS (safety
-// margin, default 250), PALACE_LOG_DIR (default logs), K13_AUTO_TOURNAMENT
-// (default 1: auto-register for tournaments), K13_TELEMETRY (0 = off),
-// K13_STALL_MS (mid-match feed silence that forces a reconnect; default
+// margin, default 250), PALACE_LOG_DIR (default logs), DAMO_AUTO_TOURNAMENT
+// (default 1: auto-register for tournaments), DAMO_TELEMETRY (0 = off),
+// DAMO_STALL_MS (mid-match feed silence that forces a reconnect; default
 // 5 auctions / at least 6 s, 0 = off).
 // Flags: --agent palace|starter|clone:<botId>, --dry-run, --as <botId>,
 // --match <matchId>, --matches <n>, --margin <ms>, --max-refine <ms>,
@@ -101,10 +101,10 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const host = process.env.STDB_HOST ?? "https://maincloud.spacetimedb.com";
   const db = process.env.STDB_DB ?? "scrabblebot";
-  const botName = process.env.BOT_NAME ?? "k13";
+  const botName = process.env.BOT_NAME ?? "damo";
   const tokenPath = path.join(ROOT, `.token-${botName}`);
   const logDir = process.env.PALACE_LOG_DIR ?? path.join(ROOT, "logs");
-  const log = new DecisionLog(logDir, args.dryRun ? "dryrun" : "decisions", args.dryRun ? "dry" : "K-13");
+  const log = new DecisionLog(logDir, args.dryRun ? "dryrun" : "decisions", args.dryRun ? "dry" : "Damo");
   setGlobalLogLevel("warn");
 
   // A thrown error anywhere must not kill a bot that's mid-match.
@@ -149,9 +149,9 @@ async function main() {
   try {
     tournamentId = process.env.TOURNAMENT_ID?.trim() ? BigInt(process.env.TOURNAMENT_ID.trim()) : undefined;
   } catch {
-    log.warn(`TOURNAMENT_ID '${process.env.TOURNAMENT_ID}' is not a number: ignored (auto-registration still on unless K13_AUTO_TOURNAMENT=0)`);
+    log.warn(`TOURNAMENT_ID '${process.env.TOURNAMENT_ID}' is not a number: ignored (auto-registration still on unless DAMO_AUTO_TOURNAMENT=0)`);
   }
-  const autoTournament = process.env.K13_AUTO_TOURNAMENT !== "0";
+  const autoTournament = process.env.DAMO_AUTO_TOURNAMENT !== "0";
   const margin = args.margin ?? (process.env.PALACE_MARGIN_MS ? Number(process.env.PALACE_MARGIN_MS) : undefined);
   const session = new Session({
     host,
@@ -161,7 +161,7 @@ async function main() {
     saveToken: (t) => saveToken(tokenPath, t, log),
     tournamentId,
     autoTournament,
-    stallMs: process.env.K13_STALL_MS !== undefined && Number.isFinite(Number(process.env.K13_STALL_MS)) ? Number(process.env.K13_STALL_MS) : undefined,
+    stallMs: process.env.DAMO_STALL_MS !== undefined && Number.isFinite(Number(process.env.DAMO_STALL_MS)) ? Number(process.env.DAMO_STALL_MS) : undefined,
     dryRun: args.dryRun,
     asBotId,
     maxMatches: args.matches ?? (args.dryRun ? 1 : 0),
@@ -225,6 +225,6 @@ function saveToken(p: string, token: string, log: DecisionLog) {
 }
 
 main().catch((e) => {
-  console.error(`[K-13] fatal: ${errMsg(e)}`);
+  console.error(`[Damo] fatal: ${errMsg(e)}`);
   process.exit(1);
 });

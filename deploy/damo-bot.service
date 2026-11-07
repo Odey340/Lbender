@@ -1,0 +1,27 @@
+# Damo live bot (systemd user unit template).
+# Replace @DAMO_DIR@ with the absolute path of this checkout and @NODE@ with the
+# node binary (Node 22.5+), then:
+#   cp deploy/damo-bot.service ~/.config/systemd/user/ && systemctl --user daemon-reload
+#   systemctl --user enable --now damo-bot
+# Credentials: the first run needs BOT_TOKEN or BOT_NONCE (see src/bot.ts);
+# afterwards the token is kept in @DAMO_DIR@/.token-<BOT_NAME> (mode 600). Do
+# not put tokens in this file.
+[Unit]
+Description=Damo ScrabbleBot
+After=network-online.target k13-stdb.service
+
+[Service]
+WorkingDirectory=@DAMO_DIR@
+Environment=BOT_NAME=k13
+# Opponent model: the miner's working copy (default: data/history.sqlite).
+Environment=DAMO_MODEL_DB=@DAMO_DIR@/data/miner.sqlite
+# Optional: tournament-only mode, never join the ladder lobby.
+#Environment=DAMO_NO_LADDER=1
+ExecStart=@NODE@ @DAMO_DIR@/node_modules/tsx/dist/cli.mjs src/bot.ts --agent palace
+Restart=always
+RestartSec=5
+StandardOutput=append:@DAMO_DIR@/logs/bot.log
+StandardError=append:@DAMO_DIR@/logs/bot.log
+
+[Install]
+WantedBy=default.target

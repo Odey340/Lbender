@@ -1,4 +1,4 @@
-// Does the opponent model loaded from K-13's backend ("stdb:") answer like
+// Does the opponent model loaded from Damo's backend ("stdb:") answer like
 // the one loaded from the miner's SQLite copy? Times the backend load and
 // compares predictBid / marketPrice / playHabits / botSummary on a sample.
 //

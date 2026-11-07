@@ -1,4 +1,4 @@
-// Mints a writer identity for K-13's Node processes: connects once with no
+// Mints a writer identity for Damo's Node processes: connects once with no
 // token, saves the server-issued token (mode 600) and prints the identity
 // for the owner to allow-list. Never prints the token.
 //

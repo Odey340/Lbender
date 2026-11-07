@@ -1,5 +1,5 @@
 // One-shot migration of the miner's SQLite history (data/history.sqlite,
-// opened read-only) into K-13's SpacetimeDB backend, and the real-data
+// opened read-only) into Damo's SpacetimeDB backend, and the real-data
 // benchmark for it.
 //
 //   tsx src/backend/import-sqlite.ts                 throwaway k13-import-<pid>, measured, deleted
@@ -35,7 +35,7 @@ const target = flag("--db");
 const throwaway = target === undefined;
 // The test harness refuses the real `k13` name on purpose, so it is only
 // loaded for a throwaway run; the real migration needs none of it.
-if (throwaway) process.env.K13_TEST_DB ??= `k13-import-${process.pid}`;
+if (throwaway) process.env.DAMO_TEST_DB ??= `k13-import-${process.pid}`;
 const harness = throwaway ? await import("./testdb.js") : undefined;
 const DB = target ?? harness!.TEST_DB;
 const keep = args.includes("--keep") || !throwaway;

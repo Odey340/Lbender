@@ -1,4 +1,4 @@
-// Opponent model: everything K-13 knows about who it's bidding
+// Opponent model: everything Damo knows about who it's bidding
 // against, loaded from data/history.sqlite.
 //
 //   const model = loadOpponentModel();
@@ -583,19 +583,19 @@ export type PalaceModel = Model;
 
 /**
  * Where loadOpponentModel() reads when called without a path: a SQLite file
- * (K13_MODEL_DB, default data/history.sqlite; k13-miner.service keeps
- * data/miner.sqlite current), or with K13_MODEL_SOURCE=backend K-13's
+ * (DAMO_MODEL_DB, default data/history.sqlite; damo-miner.service keeps
+ * data/miner.sqlite current), or with DAMO_MODEL_SOURCE=backend Damo's
  * SpacetimeDB backend, same as passing "stdb:" (src/backend/model-source.ts).
  * The backend source loads in ~3.3 s instead of ~0.25 s and never refits at
  * load, so it is not the default.
  */
 export const DEFAULT_MODEL_SOURCE =
-  process.env.K13_MODEL_SOURCE === "backend" ? "stdb:" : (process.env.K13_MODEL_DB ?? DEFAULT_DB_PATH);
+  process.env.DAMO_MODEL_SOURCE === "backend" ? "stdb:" : (process.env.DAMO_MODEL_DB ?? DEFAULT_DB_PATH);
 
 /**
  * Loads the opponent model. Never throws: with no database it still knows
  * nothing but the market default, and sims are unknown until mined.
- * `dbPath` is a SQLite file, or "stdb:[db[@uri]]" for K-13's backend.
+ * `dbPath` is a SQLite file, or "stdb:[db[@uri]]" for Damo's backend.
  */
 export function loadOpponentModel(
   dbPath: string = DEFAULT_MODEL_SOURCE,

@@ -2,9 +2,9 @@
 // k13 server, allow-lists the writer identity there, and deletes the
 // database afterwards. Tests never touch the real `k13` database.
 //
-// These are integration tests: they run only with K13_IT=1 and a reachable
+// These are integration tests: they run only with DAMO_IT=1 and a reachable
 // local k13 server plus a writer token; otherwise they skip. SPACETIME_BIN and
-// K13_STDB_CONFIG override the CLI binary and its config file.
+// DAMO_STDB_CONFIG override the CLI binary and its config file.
 
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
@@ -12,18 +12,18 @@ import { join } from "node:path";
 import { connectBackend, readWriterToken, type Backend } from "./client.js";
 
 const SPACETIME = process.env.SPACETIME_BIN ?? join(homedir(), ".local", "bin", "spacetime");
-const CONFIG = process.env.K13_STDB_CONFIG ?? join(homedir(), ".config", "k13", "local.toml");
+const CONFIG = process.env.DAMO_STDB_CONFIG ?? join(homedir(), ".config", "k13", "local.toml");
 const MODULE = join(import.meta.dirname, "..", "..", "backend");
 
 // Per-process name: the repo's `npm test` may run while someone else runs
 // this file, and two runs must not wipe each other's database.
-export const TEST_DB = process.env.K13_TEST_DB ?? `k13-test-${process.pid}`;
+export const TEST_DB = process.env.DAMO_TEST_DB ?? `k13-test-${process.pid}`;
 if (TEST_DB === "k13") throw new Error("tests must not run against the real k13 database");
 
-/** Integration tests are opt-in: K13_IT=1. */
-export const INTEGRATION = process.env.K13_IT === "1";
+/** Integration tests are opt-in: DAMO_IT=1. */
+export const INTEGRATION = process.env.DAMO_IT === "1";
 
-/** True when K13_IT=1 and the local k13 server answers; tests skip otherwise. */
+/** True when DAMO_IT=1 and the local k13 server answers; tests skip otherwise. */
 export async function serverUp(): Promise<boolean> {
   if (!INTEGRATION) return false;
   try {

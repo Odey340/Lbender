@@ -1,4 +1,4 @@
-// Evaluates K-13 in the faithful simulator, paired by deal:
+// Evaluates Damo in the faithful simulator, paired by deal:
 // every deal is played once per agent under test, in the same seat, with the
 // same opponents and the same seed, so per-deal differences cancel most of
 // the luck of the draw.
@@ -13,7 +13,7 @@
 //   starters  me + 5 copies of the official starter bot
 //   field     me + the other 5 seats of a recent real match, each a clone of
 //             the real bot that sat there (sims exact); the seat I take is
-//             the one my own bot (K-13) held, else a random real seat.
+//             the one my own bot (Damo) held, else a random real seat.
 //             --match-offset N skips the newest N matches (held-out tables).
 //   top       me + 5 clones drawn from the 12 best-rated active real bots.
 //   palaces   me + 5 copies of palace (a much stronger field than today's).
@@ -360,7 +360,7 @@ async function main() {
   const secs = (performance.now() - t0) / 1000;
   const ms = results.map((r) => r.ms);
   const head = [
-    `K-13 evaluation: ${jobs.length} games in ${secs.toFixed(0)} s (${(jobs.length / secs).toFixed(1)}/s, ${args.workers} workers), seed ${args.seed}, ${args.firstPrice ? "FirstPrice" : "Vickrey"}, model ${args.model ? "on" : "off"}.`,
+    `Damo evaluation: ${jobs.length} games in ${secs.toFixed(0)} s (${(jobs.length / secs).toFixed(1)}/s, ${args.workers} workers), seed ${args.seed}, ${args.firstPrice ? "FirstPrice" : "Vickrey"}, model ${args.model ? "on" : "off"}.`,
     `Mean match time ${est(ms).mean.toFixed(0)} ms. Intervals are 95% over deals; Δ columns are paired by deal (negative Δplace = better).`,
     "",
   ];

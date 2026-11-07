@@ -1,4 +1,4 @@
-// Node client for K-13's own SpacetimeDB backend (database `k13` on the
+// Node client for Damo's own SpacetimeDB backend (database `k13` on the
 // local k13-stdb server, 127.0.0.1:3013). Imports only the generated
 // bindings, the SDK and node built-ins, so it stays stable while the rest
 // of the bot changes around it.
@@ -47,10 +47,10 @@ export type {
 };
 export { DbConnection, Timestamp, type SubscriptionHandle };
 
-export const DEFAULT_URI = process.env.K13_STDB_URI ?? "http://127.0.0.1:3013";
-export const DEFAULT_DB = process.env.K13_STDB_DB ?? "k13";
+export const DEFAULT_URI = process.env.DAMO_STDB_URI ?? "http://127.0.0.1:3013";
+export const DEFAULT_DB = process.env.DAMO_STDB_DB ?? "k13";
 export const WRITER_TOKEN_PATH =
-  process.env.K13_WRITER_TOKEN_PATH ?? join(homedir(), ".config", "k13", "writer.token");
+  process.env.DAMO_WRITER_TOKEN_PATH ?? join(homedir(), ".config", "k13", "writer.token");
 
 /** SQL names of every public table, for `subscribeTables`. */
 export const TABLES = [

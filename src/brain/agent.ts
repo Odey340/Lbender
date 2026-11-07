@@ -1,4 +1,4 @@
-// PalaceAgent: K-13's decisions for one seat. See README.md for the
+// PalaceAgent: Damo's decisions for one seat. See README.md for the
 // strategy and the evidence; each piece lives in its own module:
 //   belief.ts  unseen tiles and opponents' racks from public history
 //   value.ts   letter values by simulated futures (CRN sampling)

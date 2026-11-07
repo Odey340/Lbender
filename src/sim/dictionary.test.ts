@@ -15,10 +15,10 @@ test("the wordlist is the server's: 172,820 words, sorted, byte-identical when a
   const words = lexWords();
   assert.equal(words.length, 172_820);
   for (let i = 1; i < words.length; i++) assert.ok(words[i - 1]! < words[i]!, `unsorted at ${i}`);
-  // The upstream game module (K13_UPSTREAM, default ../scrabblebot/spacetimedb
+  // The upstream game module (DAMO_UPSTREAM, default ../scrabblebot/spacetimedb
   // next to this repo), if checked out.
   const upstream = path.join(
-    process.env.K13_UPSTREAM ? path.resolve(process.env.K13_UPSTREAM) : path.join(import.meta.dirname, "..", "..", "..", "scrabblebot", "spacetimedb"),
+    process.env.DAMO_UPSTREAM ? path.resolve(process.env.DAMO_UPSTREAM) : path.join(import.meta.dirname, "..", "..", "..", "scrabblebot", "spacetimedb"),
     "wordlist.txt",
   );
   if (fs.existsSync(upstream)) {

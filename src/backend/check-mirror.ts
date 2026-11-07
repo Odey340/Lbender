@@ -1,4 +1,4 @@
-// Is K-13's backend tracking the game? Prints the backend's newest mirrored
+// Is Damo's backend tracking the game? Prints the backend's newest mirrored
 // auction against maincloud's (anonymous, read-only SQL), and, with
 // --sqlite <path>, every table's row count against the miner's SQLite copy.
 //

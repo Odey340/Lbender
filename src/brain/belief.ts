@@ -1,4 +1,4 @@
-// What K-13 believes about the tiles it can't see, rebuilt
+// What Damo believes about the tiles it can't see, rebuilt
 // incrementally from the public history of one match.
 //
 // Every tile is in exactly one place: auctioned already (won or discarded;

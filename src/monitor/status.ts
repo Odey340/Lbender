@@ -1,13 +1,13 @@
-// How is K-13 doing? Everything comes from K-13's own SpacetimeDB backend
+// How is Damo doing? Everything comes from Damo's own SpacetimeDB backend
 // (database `k13` on 127.0.0.1:3013): the mirrored leaderboard and history
-// (kept current by k13-miner.service) and the live bot's telemetry
+// (kept current by damo-miner.service) and the live bot's telemetry
 // (k13_status / k13_decision / k13_match).
 //
 //   npx tsx src/monitor/status.ts                one snapshot
 //   npx tsx src/monitor/status.ts --watch 30     refresh every 30 s
 //   npx tsx src/monitor/status.ts --json         the snapshot as JSON
 //
-// Env: K13_BOT_NAME (default 'K-13'), K13_STDB_URI, K13_STDB_DB.
+// Env: DAMO_BOT_NAME (default 'Damo'), DAMO_STDB_URI, DAMO_STDB_DB.
 // status-maincloud.ts is the older view straight from maincloud + local logs.
 
 import { sql, type SqlRow } from "../backend/client.js";
@@ -15,7 +15,7 @@ import { isoUs } from "../backend/sync.js";
 import { isMain } from "../memory/util.js";
 import { isProvisional, rankOf, skill, spread, type Rated } from "./rating.js";
 
-const NAME = process.env.K13_BOT_NAME ?? "K-13";
+const NAME = process.env.DAMO_BOT_NAME ?? "Damo";
 /** Style comparison: each bot's last LAST_N matches within WINDOW_H hours. */
 const WINDOW_H = 48;
 const LAST_N = 30;
@@ -148,7 +148,7 @@ export const byStanding = (a: EntryRow, b: EntryRow) => b.swissPoints - a.swissP
 
 /**
  * The tournament to show (the newest unfinished one, else the newest) and
- * K-13's place in it. `parts` are g_participant rows of the tournament's
+ * Damo's place in it. `parts` are g_participant rows of the tournament's
  * matches (running ones included); `endedMatches` the ids already over.
  */
 export function tournamentView(
@@ -203,16 +203,16 @@ function renderTournament(v: TourView | undefined, meId: number): string[] {
   );
   if (!v.active) {
     const w = v.standings.find((e) => e.botId === t.winnerBotId);
-    L.push(`         finished${w ? `, champion ${w.name}` : ""}${v.me ? `; K-13 ${v.me.finalFinishPosition ? `finished #${v.me.finalFinishPosition}` : `standing ${v.me.rank}/${v.entrants}`}` : "; K-13 was not entered"}`);
+    L.push(`         finished${w ? `, champion ${w.name}` : ""}${v.me ? `; Damo ${v.me.finalFinishPosition ? `finished #${v.me.finalFinishPosition}` : `standing ${v.me.rank}/${v.entrants}`}` : "; Damo was not entered"}`);
   } else if (!v.me) {
-    L.push(t.status.toLowerCase() === "registration" ? "         K-13 is NOT REGISTERED (register_for_tournament from the bot's credential)" : "         K-13 is not in it (registration has closed)");
+    L.push(t.status.toLowerCase() === "registration" ? "         Damo is NOT REGISTERED (register_for_tournament from the bot's credential)" : "         Damo is not in it (registration has closed)");
   } else {
     const e = v.me;
     L.push(
-      `         K-13: standing ${e.rank}/${v.entrants}, ${e.swissPoints} Swiss points, total score ${e.totalScore}${e.eliminated ? ", ELIMINATED" : ""}${e.finalFinishPosition ? `, finish #${e.finalFinishPosition}` : ""}`,
+      `         Damo: standing ${e.rank}/${v.entrants}, ${e.swissPoints} Swiss points, total score ${e.totalScore}${e.eliminated ? ", ELIMINATED" : ""}${e.finalFinishPosition ? `, finish #${e.finalFinishPosition}` : ""}`,
     );
   }
-  if (v.finalDiff !== undefined) L.push(`         final: ${v.finalGames} game(s), K-13 minus opponent ${v.finalDiff >= 0 ? "+" : ""}${v.finalDiff}`);
+  if (v.finalDiff !== undefined) L.push(`         final: ${v.finalGames} game(s), Damo minus opponent ${v.finalDiff >= 0 ? "+" : ""}${v.finalDiff}`);
   for (const m of v.myMatches) {
     L.push(`         ${m.phase.padEnd(7)} r${String(m.round).padEnd(2)} match ${String(m.matchId).padEnd(7)} ${`${m.place}/${m.seats}`.padEnd(6)} score ${String(m.score).padStart(4)} (best other ${m.bestOther})${m.ended ? "" : "  running"}`);
   }
@@ -220,7 +220,7 @@ function renderTournament(v: TourView | undefined, meId: number): string[] {
   if (show.length) {
     L.push(`         ${"#".padStart(3)} ${"bot".padEnd(16)} ${"pts".padStart(4)} ${"total".padStart(6)}`);
     for (const e of show) {
-      L.push(`         ${String(e.rank).padStart(3)} ${e.name.slice(0, 16).padEnd(16)} ${String(e.swissPoints).padStart(4)} ${String(e.totalScore).padStart(6)}${e.eliminated ? "  out" : ""}${e.finalFinishPosition ? `  #${e.finalFinishPosition}` : ""}${e.botId === meId ? "  <- K-13" : ""}`);
+      L.push(`         ${String(e.rank).padStart(3)} ${e.name.slice(0, 16).padEnd(16)} ${String(e.swissPoints).padStart(4)} ${String(e.totalScore).padStart(6)}${e.eliminated ? "  out" : ""}${e.finalFinishPosition ? `  #${e.finalFinishPosition}` : ""}${e.botId === meId ? "  <- Damo" : ""}`);
     }
   }
   return L;
@@ -331,11 +331,11 @@ export async function snapshot(): Promise<Snapshot> {
       const key = `${n(p.match_id)}|${meId}`;
       mySevens.set(key, (mySevens.get(key) ?? 0) + 1);
     }
-    // K-13's own line: its last LAST_N matches (any age), the current release's play.
+    // Damo's own line: its last LAST_N matches (any age), the current release's play.
     snap.me = { ...styleOf(meId, NAME, mySeats.map(seatFrom), mySevens), rating: snap.bot?.rating };
   }
 
-  // Top 10 real, ranked bots other than K-13.
+  // Top 10 real, ranked bots other than Damo.
   const top = allRated
     .filter((s) => live.has(s.botId) && s.botId !== meId && !isProvisional(s))
     .sort((a, b) => skill(b) - skill(a))
@@ -407,9 +407,9 @@ function styleLine(s: Style): string {
 
 export function render(s: Snapshot): string {
   const L: string[] = [];
-  L.push(`K-13 status  ${s.at}  (from the k13 backend)`);
+  L.push(`Damo status  ${s.at}  (from the k13 backend)`);
   if (s.error) L.push(`ERROR ${s.error}`);
-  if (!s.bot) L.push(`no rated bot named '${NAME}' in the mirror (set K13_BOT_NAME?)`);
+  if (!s.bot) L.push(`no rated bot named '${NAME}' in the mirror (set DAMO_BOT_NAME?)`);
   else {
     const b = s.bot;
     const rank = b.provisional ? "provisional (no rank yet)" : `rank ${b.rank} of ${b.rankedBots} ranked`;
@@ -441,7 +441,7 @@ export function render(s: Snapshot): string {
   if (s.me && withData.length) {
     const avg = (g: (x: Style) => number) => withData.reduce((a, x) => a + g(x), 0) / withData.length;
     L.push(
-      `K-13 vs top ${withData.length}: tiles ${f(s.me.tiles, 1)} vs ${f(avg((x) => x.tiles), 1)}, price ${f(s.me.price, 1)} vs ${f(avg((x) => x.price), 1)}, word length ${f(s.me.wordLen, 2)} vs ${f(avg((x) => x.wordLen), 2)}, 7+ words/match ${f(s.me.sevenPlus, 2)} vs ${f(avg((x) => x.sevenPlus), 2)}`,
+      `Damo vs top ${withData.length}: tiles ${f(s.me.tiles, 1)} vs ${f(avg((x) => x.tiles), 1)}, price ${f(s.me.price, 1)} vs ${f(avg((x) => x.price), 1)}, word length ${f(s.me.wordLen, 2)} vs ${f(avg((x) => x.wordLen), 2)}, 7+ words/match ${f(s.me.sevenPlus, 2)} vs ${f(avg((x) => x.sevenPlus), 2)}`,
     );
   }
   return L.join("\n");

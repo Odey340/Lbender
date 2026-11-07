@@ -112,9 +112,9 @@ describe("attachTelemetry (no server)", () => {
     assert.equal(beats, b);
   });
 
-  test("K13_TELEMETRY=0 gives a no-op handle", async () => {
-    const prev = process.env.K13_TELEMETRY;
-    process.env.K13_TELEMETRY = "0";
+  test("DAMO_TELEMETRY=0 gives a no-op handle", async () => {
+    const prev = process.env.DAMO_TELEMETRY;
+    process.env.DAMO_TELEMETRY = "0";
     try {
       let tapped = false;
       const h = attachTelemetry({ setTap: () => void (tapped = true), warn: () => {} });
@@ -122,13 +122,13 @@ describe("attachTelemetry (no server)", () => {
       assert.equal(tapped, false);
       await h.close();
     } finally {
-      if (prev === undefined) delete process.env.K13_TELEMETRY;
-      else process.env.K13_TELEMETRY = prev;
+      if (prev === undefined) delete process.env.DAMO_TELEMETRY;
+      else process.env.DAMO_TELEMETRY = prev;
     }
   });
 });
 
-const skip = (await serverUp()) ? false : "integration test: set K13_IT=1 with the local k13 server (127.0.0.1:3013) and a writer token";
+const skip = (await serverUp()) ? false : "integration test: set DAMO_IT=1 with the local k13 server (127.0.0.1:3013) and a writer token";
 
 describe("round trip", { skip }, () => {
   let writer: Backend;

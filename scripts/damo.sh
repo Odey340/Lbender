@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Run K-13 (bot + miner) around the clock in tmux, as an alternative to the
+# Run Damo (bot + miner) around the clock in tmux, as an alternative to the
 # systemd units in deploy/.
 #
-#   scripts/k13.sh start      tmux session 'k13': window 'bot' and window 'miner'
-#   scripts/k13.sh stop       graceful stop (SIGINT to both), then close the session
-#   scripts/k13.sh restart
-#   scripts/k13.sh status     what's running + npm run status
-#   scripts/k13.sh logs [bot|miner|decisions]   follow a log
-#   scripts/k13.sh attach     tmux attach -t k13
+#   scripts/damo.sh start      tmux session 'damo': window 'bot' and window 'miner'
+#   scripts/damo.sh stop       graceful stop (SIGINT to both), then close the session
+#   scripts/damo.sh restart
+#   scripts/damo.sh status     what's running + npm run status
+#   scripts/damo.sh logs [bot|miner|decisions]   follow a log
+#   scripts/damo.sh attach     tmux attach -t damo
 #
 # Each window runs a restart loop with exponential backoff (2 s doubling to
 # 5 min; reset after a run that lasted 10+ minutes). The bot exiting with 78
@@ -18,15 +18,15 @@
 # STDB_HOST STDB_DB PALACE_MARGIN_MS PALACE_LOG_DIR PALACE_BOT_NAME, plus
 # PALACE_BOT_ARGS (extra flags for npm run bot, e.g. "--agent starter") and
 # PALACE_MINER_ARGS (default "--follow"). They go through a mode-600 file
-# (logs/.k13-env) that each restart sources, never through a command
+# (logs/.damo-env) that each restart sources, never through a command
 # line, so a token can't show up in `ps`.
 
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SESSION=k13
+SESSION=damo
 LOGS="${PALACE_LOG_DIR:-$ROOT/logs}"
-STOP_FILE="$LOGS/.k13-stop"
-ENV_FILE="$LOGS/.k13-env"
+STOP_FILE="$LOGS/.damo-stop"
+ENV_FILE="$LOGS/.damo-env"
 PASS_VARS=(BOT_NAME BOT_TOKEN BOT_NONCE TOURNAMENT_ID STDB_HOST STDB_DB PALACE_MARGIN_MS PALACE_LOG_DIR PALACE_BOT_NAME PALACE_BOT_ARGS PALACE_MINER_ARGS)
 
 mkdir -p "$LOGS"
@@ -59,7 +59,7 @@ loop() {
     echo "=== $(date -u +%FT%TZ) $name exited with $rc" | tee -a "$log"
     [ -e "$STOP_FILE" ] && break
     if [ "$name" = bot ] && [ "$rc" -eq 78 ]; then
-      echo "=== $name: credentials missing or rejected; not restarting (fix BOT_TOKEN/BOT_NONCE, then: scripts/k13.sh restart)" | tee -a "$log"
+      echo "=== $name: credentials missing or rejected; not restarting (fix BOT_TOKEN/BOT_NONCE, then: scripts/damo.sh restart)" | tee -a "$log"
       break
     fi
     if [ $(( $(date +%s) - started )) -ge 600 ]; then delay=2; fi
@@ -75,8 +75,8 @@ cmd_start() {
   if running; then echo "already running (tmux session '$SESSION'); try: $0 status"; return 0; fi
   rm -f "$STOP_FILE"
   write_env
-  tmux new-session -d -s "$SESSION" -n bot -c "$ROOT" "bash '$ROOT/scripts/k13.sh' _loop-bot"
-  tmux new-window -t "$SESSION" -n miner -c "$ROOT" "bash '$ROOT/scripts/k13.sh' _loop-miner"
+  tmux new-session -d -s "$SESSION" -n bot -c "$ROOT" "bash '$ROOT/scripts/damo.sh' _loop-bot"
+  tmux new-window -t "$SESSION" -n miner -c "$ROOT" "bash '$ROOT/scripts/damo.sh' _loop-miner"
   echo "started tmux session '$SESSION' (windows: bot, miner). Attach: tmux attach -t $SESSION"
 }
 

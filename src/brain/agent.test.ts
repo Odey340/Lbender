@@ -152,7 +152,7 @@ test("liveCompute only changes live mode; sim replays exactly as without it", ()
   assert.deepEqual(play({ liveCompute: 16 }), play({}));
 });
 
-test("K13_PARAMS overrides the file and bad JSON is ignored", () => {
+test("DAMO_PARAMS overrides the file and bad JSON is ignored", () => {
   assert.deepEqual(envOverrides('{"liveCompute":4,"bogus":1}'), { liveCompute: 4 });
   assert.deepEqual(envOverrides("{not json"), {});
   assert.deepEqual(envOverrides(undefined), {});

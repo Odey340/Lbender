@@ -1,4 +1,4 @@
-// K-13's strategy, loaded by name by the simulator and the live bot.
+// Damo's strategy, loaded by name by the simulator and the live bot.
 // 'palace' is the strategy's internal id (a nod to the method of loci: it
 // remembers every opponent), hence PalaceAgent, the 'palace' seat spec in the
 // simulator, `--agent palace` and the PALACE_* environment variables.

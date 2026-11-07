@@ -401,7 +401,7 @@ function borrowForEntrants(clones: ClonesFile, f: FieldFile): void {
   if (changed) fs.writeFileSync(CLONES_PATH, JSON.stringify(clones, null, 1) + "\n");
 }
 
-/** Clone-only holdout loss of data/clones.json as it stands (floorQ from the file or K13_CLONE_FLOORQ). */
+/** Clone-only holdout loss of data/clones.json as it stands (floorQ from the file or DAMO_CLONE_FLOORQ). */
 async function holdout(): Promise<void> {
   const all = loadRecentTables(arg("limit", 3000), HISTORY_DB);
   const cut = Math.floor(all.length * 0.8);
@@ -427,7 +427,7 @@ async function holdout(): Promise<void> {
       bias.set(k, (bias.get(k) ?? 0) + (sm[k] - r[k]) * a.n);
   }
   log(
-    `holdout (${holdSet.length} tables, bidShift ${process.env.K13_CLONE_SHIFT ?? clones.bidShift ?? 0}, phaseTilt ${process.env.K13_CLONE_TILT ?? clones.phaseTilt ?? 0}, floorQ ${process.env.K13_CLONE_FLOORQ ?? clones.floorQ ?? 0}): loss ${(s / w).toFixed(2)}; bias ` +
+    `holdout (${holdSet.length} tables, bidShift ${process.env.DAMO_CLONE_SHIFT ?? clones.bidShift ?? 0}, phaseTilt ${process.env.DAMO_CLONE_TILT ?? clones.phaseTilt ?? 0}, floorQ ${process.env.DAMO_CLONE_FLOORQ ?? clones.floorQ ?? 0}): loss ${(s / w).toFixed(2)}; bias ` +
       [...bias].map(([k, v]) => `${k} ${(v / w >= 0 ? "+" : "") + (v / w).toFixed(2)}`).join(", "),
   );
 }
@@ -436,9 +436,9 @@ function writeField(): FieldFile {
   const dbPath = sarg("db", HISTORY_DB);
   const db = openDb(dbPath, { readOnly: true });
   try {
-    // K-13 itself is not an opponent.
+    // Damo itself is not an opponent.
     const self = new Set<number>();
-    for (const r of db.prepare(`SELECT id FROM bot WHERE name LIKE 'K-13%'`).all()) self.add(Number(r.id));
+    for (const r of db.prepare(`SELECT id FROM bot WHERE name LIKE 'Damo%'`).all()) self.add(Number(r.id));
     const f = buildField(db, arg("window", 24), arg("half-life", 6), arg("active", 6), {
       top: arg("top", 16),
       minSeats: arg("min-seats", 30),
@@ -473,7 +473,7 @@ async function evalField(): Promise<void> {
   if (mode === "entrants") {
     const ids = (f.entrants ?? []).map((e) => e.id);
     if (ids.length < size - 1) throw new Error(`field.json has ${ids.length} entrants, need ${size - 1}`);
-    // K-13 in seat 0 placeholder, then size-1 distinct entrants; seat order shuffled.
+    // Damo in seat 0 placeholder, then size-1 distinct entrants; seat order shuffled.
     tables = Array.from({ length: n }, () => {
       const pool = [...ids];
       const t: number[] = [-1];
@@ -484,7 +484,7 @@ async function evalField(): Promise<void> {
       }
       return t;
     });
-    console.log(`entrants mode: ${n} tables of ${size}, K-13 + ${size - 1} of ${ids.length} entrants, no sims`);
+    console.log(`entrants mode: ${n} tables of ${size}, Damo + ${size - 1} of ${ids.length} entrants, no sims`);
   } else tables = sampleField(f, n, rng);
   const K13 = 1_000_000;
   const mk = (legacy: boolean): MatchJob[] =>
