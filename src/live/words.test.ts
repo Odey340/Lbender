@@ -112,3 +112,38 @@ test("words: chooseWords throwing is logged, not fatal", () => {
   assert.doesNotThrow(() => wp.check(7n));
   assert.equal(logs[0]!.err, "dictionary missing");
 });
+
+test("words: the blind dump goes out while an earlier word is unacknowledged, without reusing its letters", async () => {
+  const sent: string[] = [];
+  let release: (() => void) | undefined;
+  const wp = new WordPlayer({
+    agent: { name: "t", quickBid: () => 0, chooseWords: () => ["CAT"] },
+    transport: {
+      dry: false,
+      // The first word's ack never comes back (a stalled feed); later ones are acked.
+      submitWord: (_m, w) => {
+        sent.push(w);
+        return sent.length === 1 ? new Promise<void>((r) => (release = r)) : Promise.resolve();
+      },
+    },
+    view: () => view("CATDOGS"),
+    log: () => {},
+    human: () => {},
+  });
+  wp.check(7n);
+  await tick();
+  assert.deepEqual(sent, ["CAT"]);
+  assert.equal(wp.inFlightLetters[2], 1, "C is out");
+  // A normal check waits for the ack...
+  wp.check(7n);
+  await tick();
+  assert.deepEqual(sent, ["CAT"]);
+  // ...the blind dump doesn't, and it must not spend the C, A, T again.
+  const rack = countsOf("CATDOGS").map((n, i) => n - wp.inFlightLetters[i]!);
+  assert.deepEqual(wp.dumpNow(7n, ["DOGS", "CAT"], rack, 80), ["DOGS"]);
+  await tick();
+  assert.deepEqual(sent, ["CAT", "DOGS"]);
+  release?.();
+  await tick();
+  assert.equal(wp.inFlightLetters.reduce((a, b) => a + b, 0), 0, "letters released on ack");
+});

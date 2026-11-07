@@ -1,5 +1,7 @@
 # The brain: Damo's strategy
 
+> Written by the K-13 authors (aryamehr2k); in this copy the bot is called Damo. Every measurement below was made on K-13, which Damo plays identically except for the endgame blind dump (src/live/blinddump.ts).
+
 `createAgent({ params?, mode?, seed?, model? })` in `index.ts` returns the
 `palace` agent (`agent.ts`; 'palace' is the strategy's internal id, after
 the method of loci). Every number it decides with is a field of

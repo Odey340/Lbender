@@ -58,6 +58,8 @@ export function checkWords(words: unknown, rack: Counts): Checked[] {
 
 export class WordPlayer {
   private inFlight = 0;
+  /** Letters of words sent and not yet acknowledged (the blind dump must not reuse them). */
+  private readonly inFlightCounts = new Array<number>(26).fill(0);
   private pending: bigint | null = null;
   private scheduled: bigint | null = null;
   private idleWaiters: Array<() => void> = [];
@@ -73,6 +75,29 @@ export class WordPlayer {
 
   get inFlightCount(): number {
     return this.inFlight;
+  }
+
+  /** Letters still out in unacknowledged words. */
+  get inFlightLetters(): readonly number[] {
+    return this.inFlightCounts;
+  }
+
+  /**
+   * Endgame blind dump (blinddump.ts): send `words` now, checked against
+   * `rack` (the cached rack minus letters in flight), without waiting for
+   * acks that a stalled feed may never deliver. Returns the words sent.
+   */
+  dumpNow(matchId: bigint, words: string[], rack: Counts, round: number): string[] {
+    const sent: string[] = [];
+    for (const c of checkWords(words, rack)) {
+      if ("invalid" in c) continue;
+      const key = `${matchId}|${c.rackBefore}|${c.word}`;
+      if (this.sent.has(key)) continue;
+      this.sent.add(key);
+      this.submit(matchId, c.word, c.rackBefore, 0, round);
+      sent.push(c.word);
+    }
+    return sent;
   }
 
   /** Coalesce: many row callbacks in one transaction -> one check. */
@@ -121,6 +146,8 @@ export class WordPlayer {
 
   private submit(matchId: bigint, word: string, rackBefore: string, thinkMs: number, round: number) {
     this.inFlight++;
+    const letters = countsOf(word);
+    for (let i = 0; i < 26; i++) this.inFlightCounts[i]! += letters[i]!;
     const sentAt = this.now();
     const p0 = this.perf();
     let p: Promise<void>;
@@ -146,6 +173,7 @@ export class WordPlayer {
       const reward = ok ? wordReward(word) : 0;
       this.d.log("word", { match: matchId, round, rackBefore, word, reward, thinkMs, sentAt, ackMs, ok, err, dryRun: this.d.transport.dry || undefined });
       this.d.human(`m${matchId} word ${word} from ${rackBefore}: ${ok ? `+${reward}` : `REFUSED ${err}`} (${ackMs}ms)`);
+      for (let i = 0; i < 26; i++) this.inFlightCounts[i] = Math.max(0, this.inFlightCounts[i]! - letters[i]!);
       this.settle();
     });
   }

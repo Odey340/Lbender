@@ -30,6 +30,8 @@ import {
 } from "./queries.js";
 import { tsMs, type AuctionRow } from "./rows.js";
 import { feedStalled, stallLimitMs } from "./watchdog.js";
+import { blindDumpConfig, blindDumpDue, estimatedBag, rackAfterInFlight } from "./blinddump.js";
+import { getWordEngine } from "../core/words.js";
 import {
   finalMatchIds,
   heldBy,
@@ -123,6 +125,10 @@ export class Session {
   private lastFeedAt = Date.now();
   private auctionMs = 1000;
   private stalls = 0;
+  /** Endgame blind dump (blinddump.ts), and the `${match}|${rack}` it last fired for. */
+  private readonly blindCfg = blindDumpConfig();
+  private blindDumpedFor = "";
+  private blindDumps = 0;
   /** Seat subscriptions of final games, for the running series totals. */
   private finalSeats = new Map<bigint, Handle | null>();
   /** Dry run: auction records kept for the summary. */
@@ -191,6 +197,34 @@ export class Session {
     this.connect();
     this.timers.push(setInterval(() => this.guard("tick", () => this.tick()), 5000));
     if (this.o.stallMs !== 0) this.timers.push(setInterval(() => this.guard("watchdog", () => this.checkFeed()), 1000));
+    if (this.blindCfg.enabled) this.timers.push(setInterval(() => this.guard("blind dump", () => this.checkBlindDump()), 250));
+  }
+
+  /**
+   * Endgame blind dump: the feed has gone quiet with the bag nearly empty,
+   * so cash in the best partition of the tiles we know we hold before the
+   * match can end under us. Once per (match, rack); see blinddump.ts.
+   */
+  private checkBlindDump() {
+    if (!this.conn || !this.ready || this.current === null || this.stopping) return;
+    const now = Date.now();
+    const matchId = this.current;
+    const view = this.viewFor(matchId);
+    if (!view) return;
+    if (!blindDumpDue(now, this.lastFeedAt, this.auctionMs, view.bagTotal, this.blindCfg)) return;
+    const rack = rackAfterInFlight(view.myRack, this.words.inFlightLetters);
+    let tiles = 0;
+    for (const n of rack) tiles += n;
+    const key = `${matchId}|${rackString(rack)}`;
+    if (tiles < 2 || key === this.blindDumpedFor) return;
+    this.blindDumpedFor = key;
+    const words = getWordEngine().bestPartition(rack, { timeBudgetMs: 40 }).words;
+    const sent = this.words.dumpNow(matchId, words, rack, view.round);
+    this.blindDumps++;
+    const silentMs = now - this.lastFeedAt;
+    const estBag = estimatedBag(view.bagTotal, silentMs, this.auctionMs);
+    this.o.log.write("blind_dump", { match: matchId, silentMs, cachedBag: view.bagTotal, estBag, rack: rackString(rack), words: sent, dumps: this.blindDumps });
+    this.o.log.warn(`feed silent ${Math.round(silentMs / 100) / 10} s with ~${estBag} tiles left in match ${matchId}: blind dump ${sent.join(" ") || "(nothing playable)"}`);
   }
 
   /** Mid-match silence past the limit: the stream has stalled; drop and resync. */
