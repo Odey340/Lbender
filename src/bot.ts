@@ -23,7 +23,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { setGlobalLogLevel } from "spacetimedb";
-import { emptyCounts } from "./core/rules.js";
+import { countsOf, emptyCounts } from "./core/rules.js";
+import { getWordEngine } from "./core/words.js";
 import type { Agent, MatchView } from "./core/types.js";
 import { loadAgent } from "./live/agents.js";
 import { DEFAULT_BIDDER_OPTIONS } from "./live/bidder.js";
@@ -68,6 +69,29 @@ function parseArgs(argv: string[]): Args {
 }
 
 /** Load the dictionary and JIT the agent before the first real auction. */
+/**
+ * Refuse to play with a broken dictionary: with no words every letter is
+ * worth 0, so the bot bids ~0, never plays and scores 0 (seen live when a
+ * Windows checkout gave data/wordlist.txt CRLF endings).
+ */
+function checkDictionary(log: DecisionLog): void {
+  let words = 0;
+  let probe: string | undefined;
+  try {
+    const e = getWordEngine();
+    words = e.lexWords.length;
+    probe = e.best(countsOf("RETAINS"))?.word;
+  } catch (err) {
+    log.warn(`dictionary failed to load: ${errMsg(err)}`);
+  }
+  if (words < 150_000 || !probe) {
+    const bar = "!".repeat(72);
+    console.error(`${bar}\n!! DICTIONARY BROKEN: ${words} words loaded, best word from RETAINS: ${probe ?? "none"}.\n!! The bot would bid 0 and score 0. Check data/wordlist.txt (git pull the latest Damo).\n${bar}`);
+    process.exit(70);
+  }
+  log.human(`dictionary ok: ${words} words (RETAINS -> ${probe})`);
+}
+
 function warmUp(agent: Agent, log: DecisionLog) {
   const view: MatchView = {
     matchId: 0,
@@ -132,6 +156,7 @@ async function main() {
     const bar = "!".repeat(72);
     console.warn(`${bar}\n!! Agent '${args.agent}' unavailable: ${loaded.notes.join("; ")}\n!! FALLING BACK TO THE STARTER AGENT\n${bar}`);
   } else if (loaded.notes.length) log.human(`agent ${label}: ${loaded.notes.join("; ")}`);
+  checkDictionary(log);
   warmUp(loaded.agent, log);
 
   let asBotId: bigint | undefined;

@@ -145,8 +145,12 @@ export class WordEngine {
     }
     for (let r = 0; r < 26; r++) this.rankOf[order.charCodeAt(r) - 65] = r;
 
-    // Exactly the server's lexWords(): split on \n, drop empty lines.
-    const lex = text.split("\n").filter((l) => l.length > 0);
+    // The server's lexWords(): split on \n, drop empty lines. Carriage
+    // returns are stripped first: Git for Windows checks text files out with
+    // CRLF endings, which turned every word into "WORD\r", left the engine
+    // with no words at all and made Damo bid ~0 and never play (live, on
+    // Windows). The server's own file is LF, so this changes nothing there.
+    const lex = text.replace(/\r/g, "").split("\n").filter((l) => l.length > 0);
     this.lexWords = lex;
     let sorted = true;
     for (let i = 1; i < lex.length; i++) {

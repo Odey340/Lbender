@@ -41,6 +41,7 @@ let WORDS_BY_LENGTH: string[] | undefined;
 export function lexWords(): string[] {
   LEX_WORDS ??= fs
     .readFileSync(WORDLIST_PATH, "utf8")
+    .replace(/\r/g, "") // CRLF checkouts (Git for Windows), see core/words.ts
     .split("\n")
     .filter((l) => l.length > 0);
   return LEX_WORDS;

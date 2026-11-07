@@ -9,7 +9,7 @@ import { canSpell, countsOf, emptyCounts, totalTiles, wordReward, type Counts } 
 import { WORDLIST_PATH, getWordEngine, type WordHit } from "./words.js";
 
 const engine = getWordEngine();
-const text = fs.readFileSync(WORDLIST_PATH, "utf8");
+const text = fs.readFileSync(WORDLIST_PATH, "utf8").replace(/\r/g, ""); // CRLF checkouts (Git for Windows)
 
 // --- Literal ports of spacetimedb/src/{dictionary,text}.ts ------------------
 
@@ -298,4 +298,16 @@ test("bestPartition respects its time budget", () => {
   assert.ok(p.total > 0 && p.words.length > 1);
   // Enumerating candidates isn't budgeted; the search after it is.
   assert.ok(ms < 200, `took ${ms.toFixed(1)} ms`);
+});
+
+test("words: a CRLF word list (Git for Windows checkout) loads the same words", async () => {
+  const fs = await import("node:fs");
+  const { WordEngine } = await import("./words.js");
+  const { countsOf } = await import("./rules.js");
+  const lf = fs.readFileSync(new URL("../../data/wordlist.txt", import.meta.url), "utf8");
+  const a = new WordEngine(lf);
+  const b = new WordEngine(lf.replace(/\n/g, "\r\n"));
+  assert.equal(b.lexWords.length, a.lexWords.length);
+  assert.deepEqual(b.best(countsOf("RETAINS")), a.best(countsOf("RETAINS")));
+  assert.ok(b.best(countsOf("CAT")), "short words too");
 });
