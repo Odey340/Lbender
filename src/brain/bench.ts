@@ -58,17 +58,15 @@ async function main() {
       },
     };
     const table = tables[g % tables.length]!;
-    const seats: MatchSeat[] = table
-      .slice(1)
-      .map((s, i) =>
-        s.kind === "sim"
-          ? { botId: s.botId, isSim: true, strategy: s.strategy }
-          : {
-              botId: s.botId,
-              isSim: false,
-              agent: env.createClone!(s.botId, { seed: g * 10 + i, model: env.model }),
-            },
-      );
+    const seats: MatchSeat[] = table.slice(1).map((s, i) =>
+      s.kind === "sim"
+        ? { botId: s.botId, isSim: true, strategy: s.strategy }
+        : {
+            botId: s.botId,
+            isSim: false,
+            agent: env.createClone!(s.botId, { seed: g * 10 + i, model: env.model }),
+          },
+    );
     runMatch({
       seats: [{ botId: 1_000_000, isSim: false, agent: timed }, ...seats],
       seed: 9000 + g,

@@ -109,14 +109,12 @@ async function serverStatus(): Promise<ServerStatus> {
         r: { openskillMu: n(h.openskill_mu), openskillSigma: n(h.openskill_sigma) },
       }))
       .sort((a, b) => a.at - b.at);
-    out.trend = trend
-      .slice(-15)
-      .map((h) => ({
-        at: new Date(h.at).toISOString(),
-        match: h.match,
-        rating: skill(h.r),
-        spread: spread(h.r),
-      }));
+    out.trend = trend.slice(-15).map((h) => ({
+      at: new Date(h.at).toISOString(),
+      match: h.match,
+      rating: skill(h.r),
+      spread: spread(h.r),
+    }));
     out.trendDelta =
       out.trend.length > 1 ? out.trend[out.trend.length - 1]!.rating - out.trend[0]!.rating : null;
     out.lastDelta =
