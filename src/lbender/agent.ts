@@ -78,9 +78,9 @@ export class LbenderAgent implements Agent {
     if (auctionsLeft <= 1) return 0.08; // coins expire at match end
     const seats = Math.max(2, view.participants.length);
     const expectedFutureWins = Math.max(1, auctionsLeft / seats);
-    const futureIncome = view.history.reduce((sum, e) =>
-      e.kind === "word" && e.botId === view.myBotId ? sum + e.reward : sum, 0);
-    const spendable = me + Math.min(futureIncome * 0.25, me * 0.5);
+    // Current balance already includes any previously earned word rewards;
+    // do not count historical income a second time.
+    const spendable = me;
     return clamp(7 / Math.max(1, spendable / expectedFutureWins), 0.12, 1.8);
   }
 
