@@ -20,7 +20,7 @@ const DEFAULT_TABLE =
 const HELP = `usage: npm run sim -- [options]
   --games N          matches to play (default 100; with --swap rounded up to whole deals)
   --table SPECS      comma-separated seats (default "${DEFAULT_TABLE}")
-                     palace | palace#<variant> | starter | sim:Cheapskate|ValueBidder|Aggressive
+                     lbender | palace | palace#<variant> | starter | sim:Cheapskate|ValueBidder|Aggressive
                      | clone:<botId> | idle
   --pad              fill to 6 seats from the server's sim pool, like a lobby timeout
   --swap             paired evaluation: play every deal in every seat rotation
