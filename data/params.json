@@ -4,6 +4,7 @@
   "params": {
     "coinBonus": 0.32,
     "playMargin": 2.7,
+    
     "minPlayLen": 2,
     "lambdaScale": 1.08,
     "incomeShare": 0.47,
