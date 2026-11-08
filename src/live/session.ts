@@ -820,6 +820,8 @@ export class Session {
         standings: st.map((s) => ({ ...s, name: this.botName(s.botId) })),
         clock: this.clock.snapshot(),
         agent: this.o.agentLabel,
+        // Which settings this match was played with (scripts/compare.ts groups by it).
+        params: process.env.DAMO_PARAMS?.trim() || undefined,
         dryRun: this.o.dryRun || undefined,
       });
       this.o.log.human(
