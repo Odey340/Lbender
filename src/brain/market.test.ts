@@ -37,7 +37,8 @@ test("simPmf is the server's decideBid with uniform jitter", () => {
         const pmf = simPmf(kind, letter, balance, 120);
         const want = new Float64Array(120);
         for (let j = -2; j <= 2; j++) want[decideBid(kind, letter, balance, j)]! += 0.2;
-        for (let x = 0; x < 120; x++) assert.ok(Math.abs(pmf[x]! - want[x]!) < 1e-12, `${kind} ${letter} ${balance} @${x}`);
+        for (let x = 0; x < 120; x++)
+          assert.ok(Math.abs(pmf[x]! - want[x]!) < 1e-12, `${kind} ${letter} ${balance} @${x}`);
       }
     }
   }
@@ -45,7 +46,11 @@ test("simPmf is the server's decideBid with uniform jitter", () => {
 
 test("max and second-highest CDFs match Monte Carlo", () => {
   const len = 40;
-  const pmfs = [genericPmf(P, "E", 30, len), genericPmf(P, "K", 39, len), simPmf("Aggressive", "E", 25, len)];
+  const pmfs = [
+    genericPmf(P, "E", 30, len),
+    genericPmf(P, "K", 39, len),
+    simPmf("Aggressive", "E", 25, len),
+  ];
   const cdfs = pmfs.map(cdfOf);
   const G = maxCdf(cdfs, len);
   const H = secondCdf(cdfs, len);
@@ -89,14 +94,44 @@ test("Vickrey without rivals bids about value / lambda", () => {
     [12, 0.4],
     [3, 0.25],
   ] as const) {
-    const c = chooseBid({ value: v, lambda: lam, balance: 100, firstPrice: false, pmfs, cdfs, weights: [0, 0], tieShare: 0.5, maxOverbid: 0 });
+    const c = chooseBid({
+      value: v,
+      lambda: lam,
+      balance: 100,
+      firstPrice: false,
+      pmfs,
+      cdfs,
+      weights: [0, 0],
+      tieShare: 0.5,
+      maxOverbid: 0,
+    });
     assert.ok(Math.abs(c.bid - v / lam) <= 1, `v=${v} lam=${lam} bid=${c.bid}`);
     assert.equal(c.bid, c.selfBid);
   }
   // Never above the balance; no higher than it takes to win for sure.
-  const c = chooseBid({ value: 50, lambda: 0.1, balance: 37, firstPrice: false, pmfs, cdfs, weights: [0, 0], tieShare: 0.5, maxOverbid: 5 });
+  const c = chooseBid({
+    value: 50,
+    lambda: 0.1,
+    balance: 37,
+    firstPrice: false,
+    pmfs,
+    cdfs,
+    weights: [0, 0],
+    tieShare: 0.5,
+    maxOverbid: 5,
+  });
   assert.ok(c.bid <= 37 && c.pWin > 0.999, `bid ${c.bid} pWin ${c.pWin}`);
-  const poor = chooseBid({ value: 50, lambda: 0.1, balance: 9, firstPrice: false, pmfs, cdfs, weights: [0, 0], tieShare: 0.5, maxOverbid: 5 });
+  const poor = chooseBid({
+    value: 50,
+    lambda: 0.1,
+    balance: 9,
+    firstPrice: false,
+    pmfs,
+    cdfs,
+    weights: [0, 0],
+    tieShare: 0.5,
+    maxOverbid: 5,
+  });
   assert.equal(poor.bid, 9);
 });
 
@@ -106,7 +141,17 @@ test("FirstPrice shades below the truthful bid", () => {
   const cdfs = pmfs.map(cdfOf);
   const v = 10;
   const lam = 0.4;
-  const fp = chooseBid({ value: v, lambda: lam, balance: 100, firstPrice: true, pmfs, cdfs, weights: [0, 0], tieShare: 0.5, maxOverbid: 0 });
+  const fp = chooseBid({
+    value: v,
+    lambda: lam,
+    balance: 100,
+    firstPrice: true,
+    pmfs,
+    cdfs,
+    weights: [0, 0],
+    tieShare: 0.5,
+    maxOverbid: 0,
+  });
   assert.ok(fp.bid < v / lam && fp.bid > 0, `first price bid ${fp.bid}`);
 });
 
@@ -114,7 +159,15 @@ test("rival weight only raises the bid, within maxOverbid", () => {
   const len = 101;
   const pmfs = [genericPmf({ ...P, mktBase: 20 }, "Z", 100, len), genericPmf(P, "E", 100, len)];
   const cdfs = pmfs.map(cdfOf);
-  const base = { value: 3, lambda: 0.5, balance: 100, firstPrice: false, pmfs, cdfs, tieShare: 0.5 };
+  const base = {
+    value: 3,
+    lambda: 0.5,
+    balance: 100,
+    firstPrice: false,
+    pmfs,
+    cdfs,
+    tieShare: 0.5,
+  };
   const selfish = chooseBid({ ...base, weights: [0, 0], maxOverbid: 10 });
   const driven = chooseBid({ ...base, weights: [1, 0], maxOverbid: 10 });
   assert.ok(driven.bid >= selfish.bid);
@@ -160,14 +213,21 @@ test("calibration learns that bidders bid more (or less) than predicted", () => 
   for (const truth of [0.5, 1.8]) {
     const m = new Market({ ...P, calibRate: 0.1 }, fake);
     const rand = mulberry32(17);
-    const seats = [101, 102, 103, 104, 105].map((botId) => ({ botId, isSim: false, balance: 100, rackSize: 7 }));
+    const seats = [101, 102, 103, 104, 105].map((botId) => ({
+      botId,
+      isSim: false,
+      balance: 100,
+      rackSize: 7,
+    }));
     for (let a = 0; a < 120; a++) {
       const L = "EAIRSTZQK"[a % 9]!;
       const pmfs = seats.map((s) => m.bidPmf(s, L, 0.3, len));
       m.expect(a, L, 0, pmfs.map(cdfOf), len);
       // True bids: the unscaled prediction times `truth`.
       const bids = seats
-        .map((s) => Math.min(100, Math.round(truth * sampleFrom(genericPmf(P, L, s.balance, len), rand()))))
+        .map((s) =>
+          Math.min(100, Math.round(truth * sampleFrom(genericPmf(P, L, s.balance, len), rand()))),
+        )
         .sort((x, y) => y - x);
       const winner = bids[0]! > 0 ? 101 : null;
       const paid = bids[0]! > 0 ? Math.max(bids[1]!, 1) : 0;
@@ -180,7 +240,10 @@ test("calibration learns that bidders bid more (or less) than predicted", () => 
 test("rival cut and its denial part match brute force", () => {
   const len = 30;
   const f = genericPmf({ ...P, mktBase: 6 }, "K", 28, len);
-  const others = maxCdf([cdfOf(genericPmf(P, "E", 25, len)), cdfOf(simPmf("Aggressive", "K", 20, len))], len);
+  const others = maxCdf(
+    [cdfOf(genericPmf(P, "E", 25, len)), cdfOf(simPmf("Aggressive", "K", 20, len))],
+    len,
+  );
   const g = pmfOfCdf(others);
   const B = 25;
   const { denial, cut } = rivalCut(f, others, B);

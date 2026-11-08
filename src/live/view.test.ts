@@ -34,21 +34,40 @@ function match(over: Partial<MatchRow> = {}): MatchRow {
   };
 }
 
-const seat = (id: bigint, matchId: bigint, botId: bigint, balance: bigint, score: bigint): ParticipantRow => ({
+const seat = (
+  id: bigint,
+  matchId: bigint,
+  botId: bigint,
+  balance: bigint,
+  score: bigint,
+): ParticipantRow => ({
   id,
   matchId,
   botId,
   balance,
   score,
 });
-const tile = (id: bigint, matchId: bigint, botId: bigint, letter: string, count: number): RackRow => ({
+const tile = (
+  id: bigint,
+  matchId: bigint,
+  botId: bigint,
+  letter: string,
+  count: number,
+): RackRow => ({
   id,
   matchId,
   botId,
   letter,
   count,
 });
-const result = (auctionId: bigint, matchId: bigint, letter: string, winner: bigint | undefined, paid: bigint, at: number): AuctionResultRow => ({
+const result = (
+  auctionId: bigint,
+  matchId: bigint,
+  letter: string,
+  winner: bigint | undefined,
+  paid: bigint,
+  at: number,
+): AuctionResultRow => ({
   auctionId,
   matchId,
   letter,
@@ -56,7 +75,14 @@ const result = (auctionId: bigint, matchId: bigint, letter: string, winner: bigi
   paid,
   closedAt: ts(at),
 });
-const play = (id: bigint, matchId: bigint, botId: bigint, word: string, reward: bigint, at: number): WordPlayRow => ({
+const play = (
+  id: bigint,
+  matchId: bigint,
+  botId: bigint,
+  word: string,
+  reward: bigint,
+  at: number,
+): WordPlayRow => ({
   id,
   matchId,
   botId,
@@ -94,7 +120,11 @@ test("view: seats in server order with isSim, balance and score", () => {
   assert.equal(v.matchId, 7);
   assert.equal(v.myBotId, 42);
   assert.equal(v.round, 3);
-  assert.equal(v.bagTotal, 65, "bag_total at auction open already excludes the letter on the block");
+  assert.equal(
+    v.bagTotal,
+    65,
+    "bag_total at auction open already excludes the letter on the block",
+  );
   assert.equal(v.startingRackSize, 5);
   assert.equal(v.auctionType, "Vickrey");
   assert.equal(v.nowMs, T0);
@@ -138,13 +168,32 @@ test("view: history merges results and words in server order", () => {
 
 test("view: FirstPrice auction type and auction view from a row", () => {
   const v = buildMatchView(
-    { match: match({ auctionType: { tag: "FirstPrice" } }), participants: [], rack: [], results: [], words: [], isSim },
+    {
+      match: match({ auctionType: { tag: "FirstPrice" } }),
+      participants: [],
+      rack: [],
+      results: [],
+      words: [],
+      isSim,
+    },
     42n,
     T0,
   );
   assert.equal(v.auctionType, "FirstPrice");
-  const a: AuctionRow = { id: 504n, matchId: 7n, letter: "Q", opensAt: ts(T0 + 0.25), closesAt: ts(T0 + 1000.25), status: { tag: "Open" } };
-  assert.deepEqual(auctionViewOf(a), { auctionId: 504, letter: "Q", opensAtMs: T0 + 0.25, closesAtMs: T0 + 1000.25 });
+  const a: AuctionRow = {
+    id: 504n,
+    matchId: 7n,
+    letter: "Q",
+    opensAt: ts(T0 + 0.25),
+    closesAt: ts(T0 + 1000.25),
+    status: { tag: "Open" },
+  };
+  assert.deepEqual(auctionViewOf(a), {
+    auctionId: 504,
+    letter: "Q",
+    opensAtMs: T0 + 0.25,
+    closesAtMs: T0 + 1000.25,
+  });
 });
 
 test("standings: ties share the better place, as the server rates them", () => {

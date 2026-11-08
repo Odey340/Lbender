@@ -43,7 +43,13 @@ export function rackKey(rack: Counts): string {
  * `weights`, each tile of letter i is drawn with relative weight weights[i]
  * (how likely I am to end up with it), otherwise uniformly.
  */
-export function drawInto(pool: Counts, k: number, rand: Rand, out: Counts, weights?: ArrayLike<number>): void {
+export function drawInto(
+  pool: Counts,
+  k: number,
+  rand: Rand,
+  out: Counts,
+  weights?: ArrayLike<number>,
+): void {
   const left = pool.slice();
   let W = 0;
   for (let i = 0; i < 26; i++) W += left[i]! * (weights ? weights[i]! : 1);
@@ -145,7 +151,9 @@ export class LetterTable {
 
   /** Drops samples that are too old or imagined a very different k. */
   prune(round: number, k: number, maxAge: number): void {
-    this.samples = this.samples.filter((s) => round - s.round <= maxAge && Math.abs(s.k - k) <= 1.5);
+    this.samples = this.samples.filter(
+      (s) => round - s.round <= maxAge && Math.abs(s.k - k) <= 1.5,
+    );
   }
 
   /**
@@ -170,7 +178,14 @@ export class LetterTable {
       drawInto(pool, ks, rand, future, weights);
       const r = this.rack.slice();
       for (let i = 0; i < 26; i++) r[i]! += future[i]!;
-      this.samples.push({ round, k, future, base: this.part.value(r), delta: new Float64Array(26).fill(NaN), after: new Map() });
+      this.samples.push({
+        round,
+        k,
+        future,
+        base: this.part.value(r),
+        delta: new Float64Array(26).fill(NaN),
+        after: new Map(),
+      });
     }
   }
 

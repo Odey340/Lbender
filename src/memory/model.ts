@@ -240,7 +240,9 @@ class Model implements OpponentModel {
         try {
           this.mem = keepOpen(backendSnapshotDb(be));
         } catch (e) {
-          console.warn(`[memory] backend model data unavailable: ${e instanceof Error ? e.message : e}`);
+          console.warn(
+            `[memory] backend model data unavailable: ${e instanceof Error ? e.message : e}`,
+          );
           return undefined;
         }
       }
@@ -276,7 +278,9 @@ class Model implements OpponentModel {
         this.hasMarket = true;
       }
       const latest = new Map<number, { n: number; maxUs: number }>();
-      for (const r of db.prepare("SELECT bot_id, COUNT(*) AS n, MAX(ended_us) AS m FROM bid_obs GROUP BY bot_id").all()) {
+      for (const r of db
+        .prepare("SELECT bot_id, COUNT(*) AS n, MAX(ended_us) AS m FROM bid_obs GROUP BY bot_id")
+        .all()) {
         latest.set(num(r.bot_id), { n: num(r.n), maxUs: num(r.m) });
       }
       for (const v of latest.values()) this.dataUs = Math.max(this.dataUs, v.maxUs);
@@ -297,7 +301,10 @@ class Model implements OpponentModel {
         if (!f || v.n - f.nObs >= Math.max(150, 0.15 * f.nObs)) stale.push(id);
       }
       const prio = new Set(opts.botIds ?? []);
-      stale.sort((a, b) => Number(prio.has(b)) - Number(prio.has(a)) || (latest.get(b)!.maxUs - latest.get(a)!.maxUs));
+      stale.sort(
+        (a, b) =>
+          Number(prio.has(b)) - Number(prio.has(a)) || latest.get(b)!.maxUs - latest.get(a)!.maxUs,
+      );
       const budget = opts.budgetMs ?? 2000;
       const t0 = Date.now();
       for (const id of stale) {
@@ -330,7 +337,11 @@ class Model implements OpponentModel {
     const b = this.bots.get(botId);
     if (!b) return "unknown";
     if (!b.isSim) return "Human";
-    return (["Cheapskate", "ValueBidder", "Aggressive", "Human"] as const).find((s) => s === b.strategy) ?? "unknown";
+    return (
+      (["Cheapskate", "ValueBidder", "Aggressive", "Human"] as const).find(
+        (s) => s === b.strategy,
+      ) ?? "unknown"
+    );
   }
 
   predictBid(botId: number, letter: string, ctx: BidContext): BidDistribution {
@@ -357,7 +368,13 @@ class Model implements OpponentModel {
   /** The market's own bid distribution (what an unknown real bot would bid). */
   marketBid(letter: string, ctx: BidContext): BidDistribution {
     return distFromPmf(
-      bidPmf(this.market, letterIdx(letter), ctx.phase, Math.max(0, Math.floor(ctx.balance)), ctx.rackSize ?? 7),
+      bidPmf(
+        this.market,
+        letterIdx(letter),
+        ctx.phase,
+        Math.max(0, Math.floor(ctx.balance)),
+        ctx.rackSize ?? 7,
+      ),
       "market",
     );
   }
@@ -377,10 +394,14 @@ class Model implements OpponentModel {
       try {
         // The newest ~1500 matches: a moving picture of today's market.
         const since = num(
-          db.prepare("SELECT ended_us FROM match_info ORDER BY ended_us DESC LIMIT 1 OFFSET 1500").get()?.ended_us,
+          db
+            .prepare("SELECT ended_us FROM match_info ORDER BY ended_us DESC LIMIT 1 OFFSET 1500")
+            .get()?.ended_us,
         );
         for (const r of db
-          .prepare("SELECT phase, winner_bot_id, paid, top_bid FROM auction_ctx WHERE letter = ? AND ended_us >= ?")
+          .prepare(
+            "SELECT phase, winner_bot_id, paid, top_bid FROM auction_ctx WHERE letter = ? AND ended_us >= ?",
+          )
           .iterate(L, since)) {
           if (phaseBucket(Number(r.phase)) !== pb) continue;
           n++;
@@ -426,7 +447,9 @@ class Model implements OpponentModel {
       try {
         // Recent behaviour only: bots change between versions.
         const rows = db
-          .prepare("SELECT len, rack_before, phase FROM play_obs WHERE bot_id = ? ORDER BY word_id DESC LIMIT 4000")
+          .prepare(
+            "SELECT len, rack_before, phase FROM play_obs WHERE bot_id = ? ORDER BY word_id DESC LIMIT 4000",
+          )
           .all(botId);
         for (const r of rows) {
           lengthDist[Math.min(15, num(r.len))]! += 1;
@@ -496,7 +519,9 @@ class Model implements OpponentModel {
     const db = this.open();
     if (db) {
       try {
-        const st = db.prepare("SELECT mu, sigma, last_played_us FROM bot_stats WHERE bot_id = ?").get(botId);
+        const st = db
+          .prepare("SELECT mu, sigma, last_played_us FROM bot_stats WHERE bot_id = ?")
+          .get(botId);
         if (st) {
           s.rating = skill(Number(st.mu));
           s.ratingSpread = spread(Number(st.sigma));
@@ -531,7 +556,9 @@ class Model implements OpponentModel {
         s.exactBids = num(o?.eq);
         s.censoredBids = num(o?.le);
         const p = db
-          .prepare("SELECT COUNT(*) AS n, AVG(len) AS len, AVG(rack_before) AS rack FROM play_obs WHERE bot_id = ?")
+          .prepare(
+            "SELECT COUNT(*) AS n, AVG(len) AS len, AVG(rack_before) AS rack FROM play_obs WHERE bot_id = ?",
+          )
           .get(botId);
         s.wordsPlayed = num(p?.n);
         s.meanWordLength = Number(p?.len ?? 0);
@@ -556,7 +583,11 @@ class Model implements OpponentModel {
   }
 
   /** Mean predicted bid / market's, averaged over letters in `letters`. */
-  aggressiveness(botId: number, letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ", ctx: BidContext = REF_CTX): number {
+  aggressiveness(
+    botId: number,
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    ctx: BidContext = REF_CTX,
+  ): number {
     let r = 0;
     let n = 0;
     for (const L of letters) {
@@ -590,7 +621,9 @@ export type PalaceModel = Model;
  * load, so it is not the default.
  */
 export const DEFAULT_MODEL_SOURCE =
-  process.env.DAMO_MODEL_SOURCE === "backend" ? "stdb:" : (process.env.DAMO_MODEL_DB ?? DEFAULT_DB_PATH);
+  process.env.DAMO_MODEL_SOURCE === "backend"
+    ? "stdb:"
+    : (process.env.DAMO_MODEL_DB ?? DEFAULT_DB_PATH);
 
 /**
  * Loads the opponent model. Never throws: with no database it still knows
@@ -623,4 +656,3 @@ export function storedValidation(dbPath: string = DEFAULT_DB_PATH): unknown {
     db.close();
   }
 }
-

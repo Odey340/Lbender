@@ -1,7 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { countsOf, wordReward } from "../core/rules.js";
-import { RankAllocator, bestWord, choosePlays, policyFromHabits, type PlayPolicy } from "./clones.js";
+import {
+  RankAllocator,
+  bestWord,
+  choosePlays,
+  policyFromHabits,
+  type PlayPolicy,
+} from "./clones.js";
 import { rng32 } from "./util.js";
 
 test("bestWord finds the longest playable word, then the best paying", () => {
@@ -16,7 +22,14 @@ test("bestWord finds the longest playable word, then the best paying", () => {
 });
 
 test("play policy holds for long words, clears small racks, flushes at the end", () => {
-  const p: PlayPolicy = { target: 7, slack: 0, midLen: 4, rackCap: 12, flushAuctions: 4, silent: false };
+  const p: PlayPolicy = {
+    target: 7,
+    slack: 0,
+    midLen: 4,
+    rackCap: 12,
+    flushAuctions: 4,
+    silent: false,
+  };
   // Seven tiles that spell a seven: play it.
   assert.equal(choosePlays(countsOf("RETAINS"), p, 40)[0]?.length, 7);
   // Eight tiles with no seven but a three: hold (mid-match).

@@ -5,13 +5,7 @@
 // bid standing: the worst a slow refine can do is waste a call.
 
 import type { Agent, AuctionView, MatchView } from "../core/types.js";
-import {
-  BusyTracker,
-  ClockSync,
-  refineBudgetMs,
-  sanitizeBid,
-  sendDeadlineLocal,
-} from "./clock.js";
+import { BusyTracker, ClockSync, refineBudgetMs, sanitizeBid, sendDeadlineLocal } from "./clock.js";
 import { errMsg } from "./log.js";
 import { tsMs, type AuctionResultRow, type AuctionRow } from "./rows.js";
 import { auctionViewOf, viewSummary } from "./view.js";
@@ -194,7 +188,8 @@ export class Bidder {
     if (!agent.refineBid) return;
     if (this.d.waitWordsIdle) {
       const pre = this.budgetNow(rec);
-      if (pre > opts.minRefineMs * 2) await this.d.waitWordsIdle(Math.min(opts.wordWaitMs, pre / 2));
+      if (pre > opts.minRefineMs * 2)
+        await this.d.waitWordsIdle(Math.min(opts.wordWaitMs, pre / 2));
     }
     if (rec.result) {
       rec.refineSkip = "closed";
@@ -249,7 +244,9 @@ export class Bidder {
       stage,
       amount,
       sentAt,
-      slackMs: round1(sendDeadlineLocal(rec.av.closesAtMs, c.deadlineOffsetMs, c.oneWayMs) - sentAt),
+      slackMs: round1(
+        sendDeadlineLocal(rec.av.closesAtMs, c.deadlineOffsetMs, c.oneWayMs) - sentAt,
+      ),
     };
     rec.sends.push(s);
     rec.lastSent = amount;
@@ -297,10 +294,20 @@ export class Bidder {
     // above everything this process sent means another process is bidding
     // as the same bot (two copies running): they overwrite each other's bids.
     const maxSent = rec.sends.reduce((m, x) => Math.max(m, x.amount), 0);
-    if (rec.result.won && !this.d.transport.dry && rec.result.paid > maxSent && !this.twinWarned.has(rec.matchId)) {
+    if (
+      rec.result.won &&
+      !this.d.transport.dry &&
+      rec.result.paid > maxSent &&
+      !this.twinWarned.has(rec.matchId)
+    ) {
       this.twinWarned.add(rec.matchId);
       const msg = `ANOTHER COPY OF THIS BOT IS RUNNING: won '${rec.letter}' at ${rec.result.paid} but this process bid at most ${maxSent}. Stop every other copy (yours or a teammate's): two copies overwrite each other's bids.`;
-      this.d.log("twin", { match: rec.matchId, auction: rec.auctionId, paid: rec.result.paid, maxSent });
+      this.d.log("twin", {
+        match: rec.matchId,
+        auction: rec.auctionId,
+        paid: rec.result.paid,
+        maxSent,
+      });
       this.d.human(`${"!".repeat(20)} ${msg}`);
     }
     this.maybeWrite(rec);
@@ -324,7 +331,9 @@ export class Bidder {
     if (rec.written) return;
     rec.written = true;
     const dry = this.d.transport.dry;
-    const misses = rec.sends.filter((s) => (s.err ? /expired|closed/i.test(s.err) : dry && s.slackMs < 0)).length;
+    const misses = rec.sends.filter((s) =>
+      s.err ? /expired|closed/i.test(s.err) : dry && s.slackMs < 0,
+    ).length;
     this.d.log("auction", {
       match: rec.matchId,
       auction: rec.auctionId,
@@ -360,7 +369,13 @@ export class Bidder {
           ? ` refine:${rec.refineSkip}`
           : ""
         : ` -> ${rec.refined ?? "keep"} (${rec.refineMs}ms/${rec.budgetMs})`;
-    const outcome = !r ? (note ?? "no result") : r.won ? `WON @${r.paid}` : r.winner === null ? "no bids" : `lost to ${r.winner} @${r.paid}`;
+    const outcome = !r
+      ? (note ?? "no result")
+      : r.won
+        ? `WON @${r.paid}`
+        : r.winner === null
+          ? "no bids"
+          : `lost to ${r.winner} @${r.paid}`;
     const refused = rec.sends.filter((s) => s.ok === false).map((s) => `${s.stage}:${s.err}`);
     this.d.human(
       `m${rec.matchId} r${rec.summary.round} '${rec.letter}' bal ${rec.balance} quick ${rec.quick} (${rec.quickMs}ms)${refine} | ${outcome}` +
@@ -376,7 +391,8 @@ export class Bidder {
       this.write(rec, note);
     }
     for (const [id, rec] of this.records) {
-      if (rec.written && (matchId === undefined || rec.matchId === matchId)) this.records.delete(id);
+      if (rec.written && (matchId === undefined || rec.matchId === matchId))
+        this.records.delete(id);
     }
   }
 }

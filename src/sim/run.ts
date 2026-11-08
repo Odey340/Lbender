@@ -14,7 +14,8 @@ import type { Estimate } from "./stats.js";
 export { runMatches } from "./runner.js";
 export type { RunOptions, RunResult } from "./runner.js";
 
-const DEFAULT_TABLE = "starter,sim:Cheapskate,sim:ValueBidder,sim:Aggressive,sim:ValueBidder,sim:Aggressive";
+const DEFAULT_TABLE =
+  "starter,sim:Cheapskate,sim:ValueBidder,sim:Aggressive,sim:ValueBidder,sim:Aggressive";
 
 const HELP = `usage: npm run sim -- [options]
   --games N          matches to play (default 100; with --swap rounded up to whole deals)
@@ -56,22 +57,43 @@ function parseArgs(argv: string[]): { opts: RunOptions; json: boolean; records?:
       return n;
     };
     switch (a) {
-      case "--games": opts.games = int(); break;
-      case "--table": opts.table = value(); break;
-      case "--seed": opts.seed = int(); break;
-      case "--workers": opts.workers = int(); break;
-      case "--swap": opts.swap = true; break;
-      case "--pad": opts.pad = true; break;
-      case "--first-price": opts.auctionType = "FirstPrice"; break;
+      case "--games":
+        opts.games = int();
+        break;
+      case "--table":
+        opts.table = value();
+        break;
+      case "--seed":
+        opts.seed = int();
+        break;
+      case "--workers":
+        opts.workers = int();
+        break;
+      case "--swap":
+        opts.swap = true;
+        break;
+      case "--pad":
+        opts.pad = true;
+        break;
+      case "--first-price":
+        opts.auctionType = "FirstPrice";
+        break;
       case "--rng": {
         const v = value();
-        if (v !== "server" && v !== "streams") throw new Error(`--rng needs server or streams, got '${v}'`);
+        if (v !== "server" && v !== "streams")
+          throw new Error(`--rng needs server or streams, got '${v}'`);
         opts.rng = v;
         break;
       }
-      case "--rack": opts.startingRackSize = int(); break;
-      case "--budget": opts.budgetMs = int(); break;
-      case "--params": opts.params = JSON.parse(value()) as Record<string, unknown>; break;
+      case "--rack":
+        opts.startingRackSize = int();
+        break;
+      case "--budget":
+        opts.budgetMs = int();
+        break;
+      case "--params":
+        opts.params = JSON.parse(value()) as Record<string, unknown>;
+        break;
       case "--variant": {
         const v = value();
         const eq = v.indexOf("=");
@@ -79,11 +101,21 @@ function parseArgs(argv: string[]): { opts: RunOptions; json: boolean; records?:
         variants[v.slice(0, eq)] = JSON.parse(v.slice(eq + 1)) as Record<string, unknown>;
         break;
       }
-      case "--model": opts.model = value(); break;
-      case "--no-model": opts.model = false; break;
-      case "--records": records = value(); break;
-      case "--strict": opts.strict = true; break;
-      case "--json": json = true; break;
+      case "--model":
+        opts.model = value();
+        break;
+      case "--no-model":
+        opts.model = false;
+        break;
+      case "--records":
+        records = value();
+        break;
+      case "--strict":
+        opts.strict = true;
+        break;
+      case "--json":
+        json = true;
+        break;
       case "--help":
       case "-h":
         console.log(HELP);
@@ -104,7 +136,19 @@ const ci = (e: Estimate, digits = 1, scale = 1) =>
 
 export function formatResult(r: RunResult): string {
   const rows = [
-    ["seat", "n", "score", "place", "win %", "coins", "tiles", "words", "bid rej", "word rej", "errors"],
+    [
+      "seat",
+      "n",
+      "score",
+      "place",
+      "win %",
+      "coins",
+      "tiles",
+      "words",
+      "bid rej",
+      "word rej",
+      "errors",
+    ],
     ...r.stats.map((s) => [
       s.spec,
       String(s.games),
@@ -120,7 +164,11 @@ export function formatResult(r: RunResult): string {
     ]),
   ];
   const widths = rows[0]!.map((_, c) => Math.max(...rows.map((row) => row[c]!.length)));
-  const lines = rows.map((row) => row.map((cell, c) => (c === 0 ? cell.padEnd(widths[c]!) : cell.padStart(widths[c]!))).join("  "));
+  const lines = rows.map((row) =>
+    row
+      .map((cell, c) => (c === 0 ? cell.padEnd(widths[c]!) : cell.padStart(widths[c]!)))
+      .join("  "),
+  );
   lines.splice(1, 0, widths.map((w) => "-".repeat(w)).join("  "));
   const head =
     `${r.games} matches (${r.deals} deals, ${r.seatsPerGame} seats${r.swap ? ", rotated" : ""}${r.pad ? ", sim-padded" : ""}), ` +
@@ -130,7 +178,13 @@ export function formatResult(r: RunResult): string {
   const errs = r.stats
     .filter((s) => s.firstError)
     .map((s) => `first error in ${s.spec}:\n${s.firstError}`);
-  return [head, "", ...lines, ...(notes.length ? ["", ...notes] : []), ...(errs.length ? ["", ...errs] : [])].join("\n");
+  return [
+    head,
+    "",
+    ...lines,
+    ...(notes.length ? ["", ...notes] : []),
+    ...(errs.length ? ["", ...errs] : []),
+  ].join("\n");
 }
 
 async function main() {
@@ -144,7 +198,11 @@ async function main() {
 }
 
 const entry = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (entry && fs.existsSync(entry) && fs.realpathSync(entry) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+if (
+  entry &&
+  fs.existsSync(entry) &&
+  fs.realpathSync(entry) === fs.realpathSync(fileURLToPath(import.meta.url))
+) {
   main().catch((e: unknown) => {
     console.error(e instanceof Error ? e.message : e);
     process.exit(1);

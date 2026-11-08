@@ -25,7 +25,14 @@ import { loadOpponentModel, phaseOf, type OpponentModel } from "./model.js";
 import { rng32 } from "./util.js";
 
 // The legacy helpers stay importable from here (clonecheck, tests).
-export { RankAllocator, bestWord, choosePlays, policyFromHabits, wordIndex, type PlayPolicy } from "./calibrate-legacy.js";
+export {
+  RankAllocator,
+  bestWord,
+  choosePlays,
+  policyFromHabits,
+  wordIndex,
+  type PlayPolicy,
+} from "./calibrate-legacy.js";
 export { HISTORY_DB };
 
 export const CLONES_PATH = path.join(import.meta.dirname, "..", "..", "data", "clones.json");
@@ -62,8 +69,19 @@ export interface CloneParams {
 export type ParamKey = keyof CloneParams;
 
 export const PARAM_KEYS: readonly ParamKey[] = [
-  "bidLog", "vowelLog", "midLog", "highLog", "phaseLog", "pace", "endSpend", "rankAware",
-  "minLen", "holdLen", "holdRack", "holdLate", "dumpAt",
+  "bidLog",
+  "vowelLog",
+  "midLog",
+  "highLog",
+  "phaseLog",
+  "pace",
+  "endSpend",
+  "rankAware",
+  "minLen",
+  "holdLen",
+  "holdRack",
+  "holdLate",
+  "dumpAt",
 ];
 
 export const PARAM_BOUNDS: Record<ParamKey, readonly [number, number]> = {
@@ -177,7 +195,10 @@ export function loadClonesFile(p: string = CLONES_PATH): ClonesFile | null {
 }
 
 /** Fitted params for a bot, else the generic fit, else the defaults. */
-export function cloneParamsFor(botId: number, f: ClonesFile | null = loadClonesFile()): CloneParams {
+export function cloneParamsFor(
+  botId: number,
+  f: ClonesFile | null = loadClonesFile(),
+): CloneParams {
   const p = f?.bots[String(botId)]?.params ?? f?.generic ?? DEFAULT_PARAMS;
   return clampParams({ ...DEFAULT_PARAMS, ...p });
 }
@@ -222,11 +243,28 @@ export function createCloneAgent(botId: number, opts: CloneOptions = {}): Agent 
   const dumpN = Math.floor(p.dumpAt + rng());
   const classMul = [p.vowelLog, 0, p.midLog, p.highLog];
   const envFloor = Number(process.env.DAMO_CLONE_FLOORQ);
-  const floorQ = Math.max(0, Math.min(0.95, opts.floorQ ?? (Number.isFinite(envFloor) && process.env.DAMO_CLONE_FLOORQ ? envFloor : (loadClonesFile()?.floorQ ?? 0))));
+  const floorQ = Math.max(
+    0,
+    Math.min(
+      0.95,
+      opts.floorQ ??
+        (Number.isFinite(envFloor) && process.env.DAMO_CLONE_FLOORQ
+          ? envFloor
+          : (loadClonesFile()?.floorQ ?? 0)),
+    ),
+  );
   const envTilt = Number(process.env.DAMO_CLONE_TILT);
-  const tilt = opts.phaseTilt ?? (Number.isFinite(envTilt) && process.env.DAMO_CLONE_TILT ? envTilt : (loadClonesFile()?.phaseTilt ?? 0));
+  const tilt =
+    opts.phaseTilt ??
+    (Number.isFinite(envTilt) && process.env.DAMO_CLONE_TILT
+      ? envTilt
+      : (loadClonesFile()?.phaseTilt ?? 0));
   const envShift = Number(process.env.DAMO_CLONE_SHIFT);
-  const shift = opts.bidShift ?? (Number.isFinite(envShift) && process.env.DAMO_CLONE_SHIFT ? envShift : (loadClonesFile()?.bidShift ?? 0));
+  const shift =
+    opts.bidShift ??
+    (Number.isFinite(envShift) && process.env.DAMO_CLONE_SHIFT
+      ? envShift
+      : (loadClonesFile()?.bidShift ?? 0));
   let rackKey = "";
   let rackReward = 0;
 
@@ -255,15 +293,30 @@ export function createCloneAgent(botId: number, opts: CloneOptions = {}): Agent 
       const base = d.quantile(floorQ + (1 - floorQ) * q);
       let bid = 0;
       if (base > 0) {
-        const logMul = p.bidLog + shift + classMul[letterClass(L)]! + (p.phaseLog + tilt) * (phase - 0.5) + p.pace * xBalance(balance);
+        const logMul =
+          p.bidLog +
+          shift +
+          classMul[letterClass(L)]! +
+          (p.phaseLog + tilt) * (phase - 0.5) +
+          p.pace * xBalance(balance);
         bid = Math.max(1, Math.round(base * Math.exp(logMul)));
       }
       const left = view.bagTotal + 1;
-      if (useful && left <= END_WINDOW && p.endSpend > 0) bid = Math.max(bid, Math.floor((p.endSpend * balance) / left));
+      if (useful && left <= END_WINDOW && p.endSpend > 0)
+        bid = Math.max(bid, Math.floor((p.endSpend * balance) / left));
       return Math.min(balance, bid);
     },
     chooseWords(view: MatchView): string[] {
-      return choosePlaysParam(words, view.myRack, p, minLen, dumpN, view.bagTotal, phaseNow(view), uHold);
+      return choosePlaysParam(
+        words,
+        view.myRack,
+        p,
+        minLen,
+        dumpN,
+        view.bagTotal,
+        phaseNow(view),
+        uHold,
+      );
     },
   };
 }

@@ -96,7 +96,8 @@ export function chooseBid(inp: BidInput): BidChoice {
       const { denial, cut } = rivalCut(inp.pmfs[o]!, others, B);
       const dW = inp.denialWeight ?? 1;
       const vW = inp.driveWeight ?? 1;
-      for (let b = 1; b <= B; b++) util[b]! += w * lam * (dW * denial[b]! + vW * (cut[b]! - denial[b]!));
+      for (let b = 1; b <= B; b++)
+        util[b]! += w * lam * (dW * denial[b]! + vW * (cut[b]! - denial[b]!));
     }
   }
 
@@ -122,7 +123,11 @@ export function chooseBid(inp: BidInput): BidChoice {
  * below b): sum_{x<b} f(x) sum_{y<x} (x - max(y,1)) g_-o(y). The rest of
  * the cut is price-driving: o still wins but pays my bid.
  */
-export function rivalCut(f: Float64Array, others: Float64Array, B: number): { denial: Float64Array; cut: Float64Array } {
+export function rivalCut(
+  f: Float64Array,
+  others: Float64Array,
+  B: number,
+): { denial: Float64Array; cut: Float64Array } {
   const len = others.length;
   const S = new Float64Array(len + 1);
   let tailP = 0;

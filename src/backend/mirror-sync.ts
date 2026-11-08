@@ -19,7 +19,13 @@
 
 import { Timestamp } from "spacetimedb";
 import type { Db, SqlValue } from "../memory/db.js";
-import { connectBackend, type Backend, type ConnectOptions, type DerivedMatch, type MirrorTable } from "./client.js";
+import {
+  connectBackend,
+  type Backend,
+  type ConnectOptions,
+  type DerivedMatch,
+  type MirrorTable,
+} from "./client.js";
 
 type V = SqlValue | undefined;
 type Row = Record<string, V>;
@@ -30,7 +36,8 @@ const big = (v: V): bigint =>
   v === null || v === undefined ? 0n : typeof v === "bigint" ? v : BigInt(Math.trunc(Number(v)));
 const optBig = (v: V): bigint | undefined => (v === null || v === undefined ? undefined : big(v));
 const int = (v: V): number => (v === null || v === undefined ? 0 : Number(v));
-const optInt = (v: V): number | undefined => (v === null || v === undefined ? undefined : Number(v));
+const optInt = (v: V): number | undefined =>
+  v === null || v === undefined ? undefined : Number(v);
 const ts = (v: V): Timestamp => new Timestamp(big(v));
 const optTs = (v: V): Timestamp | undefined => (v === null || v === undefined ? undefined : ts(v));
 const str = (v: V): string => (v === null || v === undefined ? "" : String(v));
@@ -38,90 +45,201 @@ const bool = (v: V): boolean => Number(v) === 1;
 
 export const conv = {
   bot: (r: Row) => ({
-    id: big(r.id), name: str(r.name), teamId: big(r.team_id), isSimulated: bool(r.is_simulated),
-    strategy: str(r.strategy), createdAt: ts(r.created_us), deletedAt: optTs(r.deleted_us),
+    id: big(r.id),
+    name: str(r.name),
+    teamId: big(r.team_id),
+    isSimulated: bool(r.is_simulated),
+    strategy: str(r.strategy),
+    createdAt: ts(r.created_us),
+    deletedAt: optTs(r.deleted_us),
   }),
   botStats: (r: Row) => ({
-    botId: big(r.bot_id), rating: int(r.rating), matchesPlayed: int(r.matches_played), wins: int(r.wins),
-    totalScore: big(r.total_score), lastPlayed: optTs(r.last_played_us), openskillMu: Number(r.mu),
+    botId: big(r.bot_id),
+    rating: int(r.rating),
+    matchesPlayed: int(r.matches_played),
+    wins: int(r.wins),
+    totalScore: big(r.total_score),
+    lastPlayed: optTs(r.last_played_us),
+    openskillMu: Number(r.mu),
     openskillSigma: Number(r.sigma),
   }),
   retired: (r: Row) => ({
-    id: big(r.id), botId: big(r.bot_id), version: int(r.version), rating: int(r.rating),
-    matchesPlayed: int(r.matches_played), wins: int(r.wins), totalScore: big(r.total_score),
-    lastPlayed: optTs(r.last_played_us), openskillMu: Number(r.mu), openskillSigma: Number(r.sigma),
+    id: big(r.id),
+    botId: big(r.bot_id),
+    version: int(r.version),
+    rating: int(r.rating),
+    matchesPlayed: int(r.matches_played),
+    wins: int(r.wins),
+    totalScore: big(r.total_score),
+    lastPlayed: optTs(r.last_played_us),
+    openskillMu: Number(r.mu),
+    openskillSigma: Number(r.sigma),
   }),
-  botVersion: (r: Row) => ({ id: big(r.id), botId: big(r.bot_id), version: int(r.version), startedAt: ts(r.started_us) }),
+  botVersion: (r: Row) => ({
+    id: big(r.id),
+    botId: big(r.bot_id),
+    version: int(r.version),
+    startedAt: ts(r.started_us),
+  }),
   match: (r: Row) => ({
-    id: big(r.id), status: str(r.status), currentRound: int(r.current_round),
-    currentAuctionId: optBig(r.current_auction_id), bagTotal: int(r.bag_total), auctionType: str(r.auction_type),
-    createdAt: ts(r.created_us), startedAt: optTs(r.started_us), endedAt: optTs(r.ended_us),
-    auctionDurationMs: big(r.auction_duration_ms ?? 1000), startingRackSize: int(r.starting_rack_size ?? 5),
+    id: big(r.id),
+    status: str(r.status),
+    currentRound: int(r.current_round),
+    currentAuctionId: optBig(r.current_auction_id),
+    bagTotal: int(r.bag_total),
+    auctionType: str(r.auction_type),
+    createdAt: ts(r.created_us),
+    startedAt: optTs(r.started_us),
+    endedAt: optTs(r.ended_us),
+    auctionDurationMs: big(r.auction_duration_ms ?? 1000),
+    startingRackSize: int(r.starting_rack_size ?? 5),
     deletedAt: optTs(r.deleted_us),
   }),
   participant: (r: Row) => ({
-    id: big(r.id), matchId: big(r.match_id), botId: big(r.bot_id), balance: big(r.balance), score: big(r.score),
+    id: big(r.id),
+    matchId: big(r.match_id),
+    botId: big(r.bot_id),
+    balance: big(r.balance),
+    score: big(r.score),
     deletedAt: optTs(r.deleted_us),
   }),
   auction: (r: Row) => ({
-    auctionId: big(r.auction_id), matchId: big(r.match_id), letter: str(r.letter),
-    winnerBotId: optBig(r.winner_bot_id), paid: big(r.paid), closedAt: ts(r.closed_us), deletedAt: optTs(r.deleted_us),
+    auctionId: big(r.auction_id),
+    matchId: big(r.match_id),
+    letter: str(r.letter),
+    winnerBotId: optBig(r.winner_bot_id),
+    paid: big(r.paid),
+    closedAt: ts(r.closed_us),
+    deletedAt: optTs(r.deleted_us),
   }),
   topBid: (r: Row) => ({
-    auctionId: big(r.auction_id), matchId: big(r.match_id), topBid: big(r.top_bid), deletedAt: optTs(r.deleted_us),
+    auctionId: big(r.auction_id),
+    matchId: big(r.match_id),
+    topBid: big(r.top_bid),
+    deletedAt: optTs(r.deleted_us),
   }),
   word: (r: Row) => ({
-    id: big(r.id), matchId: big(r.match_id), botId: big(r.bot_id), word: str(r.word), baseScore: big(r.base_score),
-    bonus: big(r.bonus), totalReward: big(r.total_reward), playedAt: ts(r.played_us), deletedAt: optTs(r.deleted_us),
+    id: big(r.id),
+    matchId: big(r.match_id),
+    botId: big(r.bot_id),
+    word: str(r.word),
+    baseScore: big(r.base_score),
+    bonus: big(r.bonus),
+    totalReward: big(r.total_reward),
+    playedAt: ts(r.played_us),
+    deletedAt: optTs(r.deleted_us),
   }),
   rating: (r: Row) => ({
-    id: big(r.id), botId: big(r.bot_id), matchId: big(r.match_id), at: ts(r.at_us), openskillMu: Number(r.mu),
+    id: big(r.id),
+    botId: big(r.bot_id),
+    matchId: big(r.match_id),
+    at: ts(r.at_us),
+    openskillMu: Number(r.mu),
     openskillSigma: Number(r.sigma),
   }),
   tournament: (r: Row) => ({
-    id: big(r.id), status: str(r.status), swissRoundsTotal: int(r.swiss_rounds_total), currentRound: int(r.current_round),
-    topCut: int(r.top_cut), matchSize: int(r.match_size), auctionType: str(r.auction_type), createdAt: ts(r.created_us),
-    endedAt: optTs(r.ended_us), winnerBotId: optBig(r.winner_bot_id),
+    id: big(r.id),
+    status: str(r.status),
+    swissRoundsTotal: int(r.swiss_rounds_total),
+    currentRound: int(r.current_round),
+    topCut: int(r.top_cut),
+    matchSize: int(r.match_size),
+    auctionType: str(r.auction_type),
+    createdAt: ts(r.created_us),
+    endedAt: optTs(r.ended_us),
+    winnerBotId: optBig(r.winner_bot_id),
   }),
   tournamentEntry: (r: Row) => ({
-    id: big(r.id), tournamentId: big(r.tournament_id), botId: big(r.bot_id), swissPoints: int(r.swiss_points),
-    eliminated: bool(r.eliminated), totalScore: big(r.total_score), finalFinishPosition: optInt(r.final_finish_position),
+    id: big(r.id),
+    tournamentId: big(r.tournament_id),
+    botId: big(r.bot_id),
+    swissPoints: int(r.swiss_points),
+    eliminated: bool(r.eliminated),
+    totalScore: big(r.total_score),
+    finalFinishPosition: optInt(r.final_finish_position),
   }),
   tournamentMatch: (r: Row) => ({
-    id: big(r.id), tournamentId: big(r.tournament_id), matchId: big(r.match_id), round: int(r.round), phase: str(r.phase),
+    id: big(r.id),
+    tournamentId: big(r.tournament_id),
+    matchId: big(r.match_id),
+    round: int(r.round),
+    phase: str(r.phase),
   }),
-  mined: (r: Row) => ({ matchId: big(r.match_id), complete: bool(r.complete), minedAt: ts(r.mined_us) }),
+  mined: (r: Row) => ({
+    matchId: big(r.match_id),
+    complete: bool(r.complete),
+    minedAt: ts(r.mined_us),
+  }),
   bidModel: (r: Row) => ({
-    botId: big(r.bot_id), fittedAt: ts(r.fitted_us), dataAt: ts(r.data_us), nObs: big(r.n_obs), params: str(r.params),
+    botId: big(r.bot_id),
+    fittedAt: ts(r.fitted_us),
+    dataAt: ts(r.data_us),
+    nObs: big(r.n_obs),
+    params: str(r.params),
   }),
 };
 
 /** Reads one match's derived rows from SQLite, in put_derived's shape. */
 export function readDerived(db: Db, matchId: number): DerivedMatch {
   const q = (sql: string) => db.prepare(sql).all(matchId) as Row[];
-  const m: DerivedMatch = { matchId: BigInt(matchId), seats: [], auctions: [], bids: [], plays: [] };
+  const m: DerivedMatch = {
+    matchId: BigInt(matchId),
+    seats: [],
+    auctions: [],
+    bids: [],
+    plays: [],
+  };
   const info = q("SELECT * FROM match_info WHERE match_id = ?")[0];
   if (info) {
     m.info = {
-      matchId: big(info.match_id), nSeats: int(info.n_seats), nReal: int(info.n_real), nAuctions: int(info.n_auctions),
-      expectedAuctions: int(info.expected_auctions), auctionType: str(info.auction_type), createdAt: ts(info.created_us),
-      endedAt: ts(info.ended_us), balanceOk: bool(info.balance_ok), derivedAt: ts(info.derived_us),
+      matchId: big(info.match_id),
+      nSeats: int(info.n_seats),
+      nReal: int(info.n_real),
+      nAuctions: int(info.n_auctions),
+      expectedAuctions: int(info.expected_auctions),
+      auctionType: str(info.auction_type),
+      createdAt: ts(info.created_us),
+      endedAt: ts(info.ended_us),
+      balanceOk: bool(info.balance_ok),
+      derivedAt: ts(info.derived_us),
     };
   }
   for (const r of q("SELECT * FROM match_seat WHERE match_id = ?")) {
     m.seats.push({
-      id: 0n, matchId: big(r.match_id), botId: big(r.bot_id), isSim: bool(r.is_sim), strategy: str(r.strategy),
-      version: int(r.version), finalScore: big(r.final_score), finalBalance: big(r.final_balance), place: int(r.place),
-      wonTiles: int(r.won_tiles), paidTotal: big(r.paid_total), words: int(r.words), lettersPlayed: int(r.letters_played),
-      tilesLeft: int(r.tiles_left), endedAt: ts(r.ended_us),
+      id: 0n,
+      matchId: big(r.match_id),
+      botId: big(r.bot_id),
+      isSim: bool(r.is_sim),
+      strategy: str(r.strategy),
+      version: int(r.version),
+      finalScore: big(r.final_score),
+      finalBalance: big(r.final_balance),
+      place: int(r.place),
+      wonTiles: int(r.won_tiles),
+      paidTotal: big(r.paid_total),
+      words: int(r.words),
+      lettersPlayed: int(r.letters_played),
+      tilesLeft: int(r.tiles_left),
+      endedAt: ts(r.ended_us),
     });
   }
   for (const r of q("SELECT * FROM auction_ctx WHERE match_id = ?")) {
     m.auctions.push({
-      auctionId: big(r.auction_id), matchId: big(r.match_id), roundIdx: int(r.round_idx), nAuctions: int(r.n_auctions),
-      phase: Number(r.phase), letter: str(r.letter), winnerBotId: optBig(r.winner_bot_id),
-      winnerIsSim: r.winner_is_sim === null || r.winner_is_sim === undefined ? undefined : bool(r.winner_is_sim),
-      paid: big(r.paid), topBid: optBig(r.top_bid), closedAt: ts(r.closed_us), endedAt: ts(r.ended_us),
+      auctionId: big(r.auction_id),
+      matchId: big(r.match_id),
+      roundIdx: int(r.round_idx),
+      nAuctions: int(r.n_auctions),
+      phase: Number(r.phase),
+      letter: str(r.letter),
+      winnerBotId: optBig(r.winner_bot_id),
+      winnerIsSim:
+        r.winner_is_sim === null || r.winner_is_sim === undefined
+          ? undefined
+          : bool(r.winner_is_sim),
+      paid: big(r.paid),
+      topBid: optBig(r.top_bid),
+      closedAt: ts(r.closed_us),
+      endedAt: ts(r.ended_us),
       simQ: r.sim_q === null || r.sim_q === undefined ? undefined : Number(r.sim_q),
     });
   }
@@ -129,17 +247,40 @@ export function readDerived(db: Db, matchId: number): DerivedMatch {
     "SELECT * FROM bid_obs WHERE auction_id IN (SELECT auction_id FROM auction_result WHERE match_id = ?)",
   )) {
     m.bids.push({
-      id: 0n, auctionId: big(r.auction_id), botId: big(r.bot_id), matchId: big(r.match_id), letter: str(r.letter),
-      roundIdx: int(r.round_idx), phase: Number(r.phase), balance: big(r.balance), cap: big(r.cap),
-      rackSize: int(r.rack_size), kind: int(r.kind), value: big(r.value), won: bool(r.won),
-      othersMax: optBig(r.others_max), version: int(r.version), endedAt: ts(r.ended_us),
+      id: 0n,
+      auctionId: big(r.auction_id),
+      botId: big(r.bot_id),
+      matchId: big(r.match_id),
+      letter: str(r.letter),
+      roundIdx: int(r.round_idx),
+      phase: Number(r.phase),
+      balance: big(r.balance),
+      cap: big(r.cap),
+      rackSize: int(r.rack_size),
+      kind: int(r.kind),
+      value: big(r.value),
+      won: bool(r.won),
+      othersMax: optBig(r.others_max),
+      version: int(r.version),
+      endedAt: ts(r.ended_us),
     });
   }
-  for (const r of q("SELECT * FROM play_obs WHERE word_id IN (SELECT id FROM word_play WHERE match_id = ?)")) {
+  for (const r of q(
+    "SELECT * FROM play_obs WHERE word_id IN (SELECT id FROM word_play WHERE match_id = ?)",
+  )) {
     m.plays.push({
-      wordId: big(r.word_id), matchId: big(r.match_id), botId: big(r.bot_id), isSim: bool(r.is_sim), word: str(r.word),
-      len: int(r.len), reward: big(r.reward), roundIdx: int(r.round_idx), phase: Number(r.phase),
-      rackBefore: int(r.rack_before), balanceBefore: big(r.balance_before), endedAt: ts(r.ended_us),
+      wordId: big(r.word_id),
+      matchId: big(r.match_id),
+      botId: big(r.bot_id),
+      isSim: bool(r.is_sim),
+      word: str(r.word),
+      len: int(r.len),
+      reward: big(r.reward),
+      roundIdx: int(r.round_idx),
+      phase: Number(r.phase),
+      rackBefore: int(r.rack_before),
+      balanceBefore: big(r.balance_before),
+      endedAt: ts(r.ended_us),
     });
   }
   return m;
@@ -178,7 +319,13 @@ export class MirrorSync {
   private lastBackfill?: string;
   private timer?: ReturnType<typeof setInterval>;
   readonly stats: SyncStats = {
-    ticks: 0, failures: 0, matchesPushed: 0, derivedPushed: 0, modelsPushed: 0, rowsPushed: 0, lastOkAt: 0,
+    ticks: 0,
+    failures: 0,
+    matchesPushed: 0,
+    derivedPushed: 0,
+    modelsPushed: 0,
+    rowsPushed: 0,
+    lastOkAt: 0,
   };
 
   constructor(
@@ -268,8 +415,12 @@ export class MirrorSync {
     await b.upsertRetiredBotStats(this.all("SELECT * FROM retired_bot_stats").map(conv.retired));
     await b.upsertBotVersions(this.all("SELECT * FROM bot_version").map(conv.botVersion));
     await b.upsertTournaments(this.all("SELECT * FROM tournament").map(conv.tournament));
-    await b.upsertTournamentEntries(this.all("SELECT * FROM tournament_entry").map(conv.tournamentEntry));
-    await b.upsertTournamentMatches(this.all("SELECT * FROM tournament_match").map(conv.tournamentMatch));
+    await b.upsertTournamentEntries(
+      this.all("SELECT * FROM tournament_entry").map(conv.tournamentEntry),
+    );
+    await b.upsertTournamentMatches(
+      this.all("SELECT * FROM tournament_match").map(conv.tournamentMatch),
+    );
     if (full) {
       await b.upsertMatches(this.all("SELECT * FROM match_state").map(conv.match));
       // State tables mirror server-side deletes: drop backend keys SQLite lost.
@@ -283,8 +434,14 @@ export class MirrorSync {
       ];
       for (const [bt, bk, lt, lk] of del) {
         const have = new Set(this.all(`SELECT ${lk} AS k FROM ${lt}`).map((r) => Number(r.k)));
-        const gone = (await b.sql(`SELECT ${bk} FROM ${bt}`)).map((r) => Number(r[bk])).filter((k) => !have.has(k));
-        if (gone.length) await b.mirrorDelete(bt, gone.map((k) => BigInt(k)));
+        const gone = (await b.sql(`SELECT ${bk} FROM ${bt}`))
+          .map((r) => Number(r[bk]))
+          .filter((k) => !have.has(k));
+        if (gone.length)
+          await b.mirrorDelete(
+            bt,
+            gone.map((k) => BigInt(k)),
+          );
       }
       this.lastBaseFull = Date.now();
     }
@@ -300,9 +457,9 @@ export class MirrorSync {
       const x = bMined.get(Number(r.match_id));
       return !x || x.at !== Number(r.mined_us) || x.complete !== bool(r.complete);
     });
-    const running = this.all("SELECT id FROM match_state WHERE status <> 'Ended' AND deleted_us IS NULL").map((r) =>
-      Number(r.id),
-    );
+    const running = this.all(
+      "SELECT id FROM match_state WHERE status <> 'Ended' AND deleted_us IS NULL",
+    ).map((r) => Number(r.id));
     const changedIds = new Set(changed.map((r) => Number(r.match_id)));
     const ids = [...new Set([...changedIds, ...running])].sort((x, y) => x - y);
     const per = Math.max(1, this.o.matchesPerBatch ?? 200);
@@ -325,8 +482,13 @@ export class MirrorSync {
       // rating_history ids change on server rebuilds: replace per match.
       const done = chunkIds.filter((id) => changedIds.has(id));
       if (done.length) {
-        const rs = this.all(`SELECT * FROM rating_history WHERE match_id IN (${done.join(",")})`).map(conv.rating);
-        await b.replaceRatings(done.map((id) => BigInt(id)), rs);
+        const rs = this.all(
+          `SELECT * FROM rating_history WHERE match_id IN (${done.join(",")})`,
+        ).map(conv.rating);
+        await b.replaceRatings(
+          done.map((id) => BigInt(id)),
+          rs,
+        );
         rows += rs.length;
         const mm = changed.filter((r) => done.includes(Number(r.match_id))).map(conv.mined);
         await b.upsertMatchMined(mm);
@@ -335,7 +497,8 @@ export class MirrorSync {
       }
       this.stats.rowsPushed += rows;
     }
-    if (changed.length > 0) this.log(`backend sync: mirrored ${changed.length} matches (+${running.length} running)`);
+    if (changed.length > 0)
+      this.log(`backend sync: mirrored ${changed.length} matches (+${running.length} running)`);
 
     // 3. Derived rows, whole matches.
     const bDerived = new Map<number, number>();

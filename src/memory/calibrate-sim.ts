@@ -9,12 +9,33 @@ import type { Agent } from "../core/types.js";
 import { runMatch, type MatchSeat, type SimStrategy } from "../sim/engine.js";
 import { placesAndWins } from "../sim/stats.js";
 import { createLegacyCloneAgent } from "./calibrate-legacy.js";
-import { PARAM_KEYS, cloneModel, createCloneAgent, letterClass, type CloneParams } from "./clones.js";
+import {
+  PARAM_KEYS,
+  cloneModel,
+  createCloneAgent,
+  letterClass,
+  type CloneParams,
+} from "./clones.js";
 
 /** Per seat-match statistics; real targets use the same keys. */
 export const STAT_KEYS = [
-  "score", "place", "win", "tiles", "paid", "coins", "words", "letters", "bingos",
-  "phaseSum", "vowel", "high", "left", "l23", "l4", "l5", "l6",
+  "score",
+  "place",
+  "win",
+  "tiles",
+  "paid",
+  "coins",
+  "words",
+  "letters",
+  "bingos",
+  "phaseSum",
+  "vowel",
+  "high",
+  "left",
+  "l23",
+  "l4",
+  "l5",
+  "l6",
 ] as const;
 export type StatKey = (typeof STAT_KEYS)[number];
 export const S = Object.fromEntries(STAT_KEYS.map((k, i) => [k, i])) as Record<StatKey, number>;
@@ -47,15 +68,27 @@ export function playJob(env: Env, job: MatchJob): number[][] {
       case "sim":
         return { botId: s.botId, isSim: true, strategy: s.strategy };
       case "legacy":
-        return { botId: s.botId, isSim: false, agent: createLegacyCloneAgent(s.botId, { seed, model }) };
+        return {
+          botId: s.botId,
+          isSim: false,
+          agent: createLegacyCloneAgent(s.botId, { seed, model }),
+        };
       case "palace":
         if (!env.createPalace) throw new Error("palace seat needs src/brain/index.ts");
-        return { botId: s.botId, isSim: false, agent: env.createPalace({ params: s.params, mode: "sim", seed, model }) };
+        return {
+          botId: s.botId,
+          isSim: false,
+          agent: env.createPalace({ params: s.params, mode: "sim", seed, model }),
+        };
       case "clone":
         return {
           botId: s.botId,
           isSim: false,
-          agent: createCloneAgent(s.botId, { seed, model, params: s.params ? paramsFromVec(s.params) : undefined }),
+          agent: createCloneAgent(s.botId, {
+            seed,
+            model,
+            params: s.params ? paramsFromVec(s.params) : undefined,
+          }),
         };
     }
   });
@@ -110,7 +143,10 @@ function workerExecArgv(): string[] {
   return ["--import", loader];
 }
 
-type FromWorker = { type: "ready" } | { type: "done"; id: number; stats: number[][][] } | { type: "error"; message: string };
+type FromWorker =
+  | { type: "ready" }
+  | { type: "done"; id: number; stats: number[][][] }
+  | { type: "error"; message: string };
 
 export class SimPool {
   private workers: Worker[] = [];
@@ -141,7 +177,11 @@ export class SimPool {
   }
 
   /** Runs every job; results in job order. */
-  async run(jobs: MatchJob[], chunk = 24, onProgress?: (done: number) => void): Promise<number[][][]> {
+  async run(
+    jobs: MatchJob[],
+    chunk = 24,
+    onProgress?: (done: number) => void,
+  ): Promise<number[][][]> {
     await this.ready;
     const out: number[][][] = new Array(jobs.length);
     let next = 0;

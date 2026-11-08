@@ -101,12 +101,20 @@ function erfc(x: number): number {
               (0.37409196 +
                 t *
                   (0.09678418 +
-                    t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))),
+                    t *
+                      (-0.18628806 +
+                        t *
+                          (0.27886807 +
+                            t *
+                              (-1.13520398 +
+                                t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))),
     );
   return x >= 0 ? r : 2 - r;
 }
-export const normCdf = (z: number): number => (z === -Infinity ? 0 : z === Infinity ? 1 : 0.5 * erfc(-z * SQRT1_2));
-export const normPdf = (z: number): number => (Number.isFinite(z) ? INV_SQRT_2PI * Math.exp(-0.5 * z * z) : 0);
+export const normCdf = (z: number): number =>
+  z === -Infinity ? 0 : z === Infinity ? 1 : 0.5 * erfc(-z * SQRT1_2);
+export const normPdf = (z: number): number =>
+  Number.isFinite(z) ? INV_SQRT_2PI * Math.exp(-0.5 * z * z) : 0;
 
 /** Phi(hi) - Phi(lo) without cancellation in the upper tail. */
 function normDiff(lo: number, hi: number): number {
@@ -146,7 +154,15 @@ export interface RawObs {
 
 export class ObsBuilder {
   private map = new Map<number, number>();
-  private rows: { letter: number; pb: number; bb: number; rb: number; kind: number; value: number; w: number }[] = [];
+  private rows: {
+    letter: number;
+    pb: number;
+    bb: number;
+    rb: number;
+    kind: number;
+    value: number;
+    w: number;
+  }[] = [];
   private total = 0;
 
   /** Normalizes the clamp: a bid at the cap only says the latent reached it. */
@@ -159,10 +175,26 @@ export class ObsBuilder {
     if (kind === KIND_EQ && value >= 1 && value >= cap) kind = KIND_GE;
     if (kind === KIND_GE && value <= 0) return;
     value = Math.min(value, 4095);
-    this.addBucketed(o.letter, phaseBucket(o.phase), balanceBucket(o.balance), rackBucket(o.rack), kind, value, o.weight);
+    this.addBucketed(
+      o.letter,
+      phaseBucket(o.phase),
+      balanceBucket(o.balance),
+      rackBucket(o.rack),
+      kind,
+      value,
+      o.weight,
+    );
   }
 
-  private addBucketed(letter: number, pb: number, bb: number, rb: number, kind: number, value: number, w: number): void {
+  private addBucketed(
+    letter: number,
+    pb: number,
+    bb: number,
+    rb: number,
+    kind: number,
+    value: number,
+    w: number,
+  ): void {
     const key = ((((letter * N_PHASE + pb) * 16 + bb) * 8 + rb) * 3 + kind) * 4096 + value;
     this.total += w;
     const at = this.map.get(key);
@@ -174,7 +206,8 @@ export class ObsBuilder {
 
   /** Adds this set's rows to `target`, weights scaled. */
   mergeInto(target: ObsBuilder, scale: number): void {
-    for (const r of this.rows) target.addBucketed(r.letter, r.pb, r.bb, r.rb, r.kind, r.value, r.w * scale);
+    for (const r of this.rows)
+      target.addBucketed(r.letter, r.pb, r.bb, r.rb, r.kind, r.value, r.w * scale);
   }
 
   get totalWeight(): number {
@@ -225,7 +258,15 @@ interface Terms {
 }
 
 /** Log-likelihood of one observation and its partials in (mu, logit pi, log sigma). */
-export function obsTerms(kind: number, x: number, cap: number, mu: number, eta: number, logSigma: number, out: Terms): void {
+export function obsTerms(
+  kind: number,
+  x: number,
+  cap: number,
+  mu: number,
+  eta: number,
+  logSigma: number,
+  out: Terms,
+): void {
   const sig = Math.exp(logSigma);
   const pi = 1 / (1 + Math.exp(-eta));
   const dpi = pi * (1 - pi);
@@ -299,9 +340,27 @@ export interface PriorScales {
 
 // Tuned on an out-of-time holdout (validate.ts): tighter than intuition
 // suggests, because bots change between matches and new bots drift fast.
-export const BOT_PRIOR: PriorScales = { delta: 0.35, zeta: 0.7, e: 0.14, f: 0.35, g: 0.1, h: 0.25, cov: 0.14, s: 0.18 };
+export const BOT_PRIOR: PriorScales = {
+  delta: 0.35,
+  zeta: 0.7,
+  e: 0.14,
+  f: 0.35,
+  g: 0.1,
+  h: 0.25,
+  cov: 0.14,
+  s: 0.18,
+};
 /** The market itself: weak pull toward a face-value default, no bot-wide offsets. */
-export const MARKET_PRIOR: PriorScales = { delta: 1e-3, zeta: 1e-3, e: 2.0, f: 3.0, g: 1.0, h: 1.5, cov: 1.0, s: 1.0 };
+export const MARKET_PRIOR: PriorScales = {
+  delta: 1e-3,
+  zeta: 1e-3,
+  e: 2.0,
+  f: 3.0,
+  g: 1.0,
+  h: 1.5,
+  cov: 1.0,
+  s: 1.0,
+};
 
 // Flat vector: [delta, zeta, e x26, f x26, g x5, h x5, tMu, tPi, rMu, rPi, s]
 const I_DELTA = 0;
@@ -369,7 +428,13 @@ function decompose(base: BidParams, p: BidParams): Float64Array {
 }
 
 /** Negative log posterior and its gradient. */
-function objective(obs: ObsSet, base: BidParams, sd: Float64Array, v: Float64Array, grad: Float64Array): number {
+function objective(
+  obs: ObsSet,
+  base: BidParams,
+  sd: Float64Array,
+  v: Float64Array,
+  grad: Float64Array,
+): number {
   grad.fill(0);
   const p = compose(base, v);
   const t: Terms = { ll: 0, dMu: 0, dEta: 0, dS: 0 };
@@ -571,7 +636,13 @@ export function bidPmf(
 }
 
 /** mu and logit(pi) for one exact context. */
-export function linear(p: BidParams, letter: number, phase: number, balance: number, rack: number): { mu: number; eta: number } {
+export function linear(
+  p: BidParams,
+  letter: number,
+  phase: number,
+  balance: number,
+  rack: number,
+): { mu: number; eta: number } {
   const k = phaseBucket(phase);
   const xb = xBalance(balance);
   const xr = xRack(rack);
@@ -596,7 +667,15 @@ export function rawLogLik(p: BidParams, o: RawObs): number | null {
 }
 
 /** P(bid <= x) in one exact context, with the clamp at `cap`. */
-export function bidCdf(p: BidParams, letter: number, phase: number, balance: number, rack: number, cap: number, x: number): number {
+export function bidCdf(
+  p: BidParams,
+  letter: number,
+  phase: number,
+  balance: number,
+  rack: number,
+  cap: number,
+  x: number,
+): number {
   if (x < 0) return 0;
   if (x >= cap) return 1;
   const { mu, eta } = linear(p, letter, phase, balance, rack);

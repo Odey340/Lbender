@@ -91,7 +91,10 @@ export class Belief {
 
   /** Tiles a bot holds now (exact from public data). */
   rackSize(botId: number): number {
-    return Math.max(0, this.startRack + (this.wonN.get(botId) ?? 0) - (this.playedN.get(botId) ?? 0));
+    return Math.max(
+      0,
+      this.startRack + (this.wonN.get(botId) ?? 0) - (this.playedN.get(botId) ?? 0),
+    );
   }
 
   /** Starting tiles of `botId` revealed by its plays (a lower bound per letter). */
@@ -112,7 +115,12 @@ export class Belief {
       known[i] = Math.max(0, b[i]! - p[i]!);
       rev += Math.max(0, p[i]! - b[i]!);
     }
-    return { botId, size: this.rackSize(botId), known, hiddenLeft: Math.max(0, this.startRack - rev) };
+    return {
+      botId,
+      size: this.rackSize(botId),
+      known,
+      hiddenLeft: Math.max(0, this.startRack - rev),
+    };
   }
 
   /** My starting rack, recovered from what I hold, played and bought. */
@@ -139,7 +147,10 @@ export class Belief {
     }
     const cur = current ? idx(current) : -1;
     for (let i = 0; i < 26; i++) {
-      pool[i] = Math.max(0, DEFAULT_BAG[i]! - this.auctioned[i]! - start[i]! - rev[i]! - (i === cur ? 1 : 0));
+      pool[i] = Math.max(
+        0,
+        DEFAULT_BAG[i]! - this.auctioned[i]! - start[i]! - rev[i]! - (i === cur ? 1 : 0),
+      );
     }
     return pool;
   }

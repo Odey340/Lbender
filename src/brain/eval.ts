@@ -97,20 +97,48 @@ function parseArgs(argv: string[]): Args {
       return x;
     };
     switch (k) {
-      case "--settings": a.settings = v().split(","); break;
-      case "--deals": a.deals = Number(v()); break;
-      case "--agents": a.agents = v().split(","); break;
-      case "--workers": a.workers = Number(v()); break;
-      case "--seed": a.seed = Number(v()); break;
-      case "--matches": a.matches = Number(v()); break;
-      case "--match-offset": a.matchOffset = Number(v()); break;
-      case "--table": a.table = v(); break;
-      case "--first-price": a.firstPrice = true; break;
-      case "--no-model": a.model = false; break;
-      case "--budget": a.budgetMs = Number(v()); break;
-      case "--json": a.json = v(); break;
-      case "--md": a.md = v(); break;
-      case "--ablations": ablations = true; break;
+      case "--settings":
+        a.settings = v().split(",");
+        break;
+      case "--deals":
+        a.deals = Number(v());
+        break;
+      case "--agents":
+        a.agents = v().split(",");
+        break;
+      case "--workers":
+        a.workers = Number(v());
+        break;
+      case "--seed":
+        a.seed = Number(v());
+        break;
+      case "--matches":
+        a.matches = Number(v());
+        break;
+      case "--match-offset":
+        a.matchOffset = Number(v());
+        break;
+      case "--table":
+        a.table = v();
+        break;
+      case "--first-price":
+        a.firstPrice = true;
+        break;
+      case "--no-model":
+        a.model = false;
+        break;
+      case "--budget":
+        a.budgetMs = Number(v());
+        break;
+      case "--json":
+        a.json = v();
+        break;
+      case "--md":
+        a.md = v();
+        break;
+      case "--ablations":
+        ablations = true;
+        break;
       case "--variant": {
         const s = v();
         const eq = s.indexOf("=");
@@ -170,11 +198,14 @@ export async function fieldTables(n: number, offset = 0): Promise<SeatDef[][]> {
       )
       .all(n, offset)
       .map((r) => Number(r.match_id));
-    const seatQ = db.prepare("SELECT bot_id, is_sim, strategy FROM match_seat WHERE match_id = ? ORDER BY bot_id");
+    const seatQ = db.prepare(
+      "SELECT bot_id, is_sim, strategy FROM match_seat WHERE match_id = ? ORDER BY bot_id",
+    );
     return ids.map((id) =>
       seatQ.all(id).map((r): SeatDef => {
         const botId = Number(r.bot_id);
-        if (Number(r.is_sim) === 1) return { kind: "sim", botId, strategy: String(r.strategy) as SimStrategy };
+        if (Number(r.is_sim) === 1)
+          return { kind: "sim", botId, strategy: String(r.strategy) as SimStrategy };
         return { kind: "clone", botId };
       }),
     );
@@ -223,7 +254,9 @@ export function buildJobs(args: JobSpec, field: SeatDef[][], top: number[] = [])
   for (const setting of args.settings) {
     const d0 = args.dealOffset ?? 0;
     for (let deal = d0; deal < d0 + args.deals; deal++) {
-      const rand = mulberry32((args.seed * 1_000_003 + deal * 7919 + setting.length * 104_729) >>> 0);
+      const rand = mulberry32(
+        (args.seed * 1_000_003 + deal * 7919 + setting.length * 104_729) >>> 0,
+      );
       let seats: SeatDef[];
       if (setting === "sims") {
         const pool = SIM_POOL.slice();
@@ -231,7 +264,9 @@ export function buildJobs(args: JobSpec, field: SeatDef[][], top: number[] = [])
           const j = Math.floor(rand() * (i + 1));
           [pool[i], pool[j]] = [pool[j]!, pool[i]!];
         }
-        seats = pool.slice(0, 5).map((s): SeatDef => ({ kind: "sim", botId: s.botId, strategy: s.strategy }));
+        seats = pool
+          .slice(0, 5)
+          .map((s): SeatDef => ({ kind: "sim", botId: s.botId, strategy: s.strategy }));
       } else if (setting === "starters") {
         seats = [1, 2, 3, 4, 5].map((k): SeatDef => ({ kind: "starter", botId: TEST_ID + k }));
       } else if (setting === "palaces") {
@@ -242,7 +277,9 @@ export function buildJobs(args: JobSpec, field: SeatDef[][], top: number[] = [])
         let mine = table.findIndex((s) => OWN_BOTS.has(s.botId));
         if (mine < 0) {
           const real = table.map((s, i) => (s.kind === "clone" ? i : -1)).filter((i) => i >= 0);
-          mine = real.length ? real[Math.floor(rand() * real.length)]! : Math.floor(rand() * table.length);
+          mine = real.length
+            ? real[Math.floor(rand() * real.length)]!
+            : Math.floor(rand() * table.length);
         }
         seats = table.filter((_, i) => i !== mine);
       } else if (setting === "top") {
@@ -259,7 +296,11 @@ export function buildJobs(args: JobSpec, field: SeatDef[][], top: number[] = [])
       } else throw new Error(`unknown setting '${setting}'`);
       // My seat moves around the table so seat order can't favour anyone.
       const at = deal % (seats.length + 1);
-      const full = [...seats.slice(0, at), { kind: "test", botId: TEST_ID } as SeatDef, ...seats.slice(at)];
+      const full = [
+        ...seats.slice(0, at),
+        { kind: "test", botId: TEST_ID } as SeatDef,
+        ...seats.slice(at),
+      ];
       const seed = (Math.floor(rand() * 2 ** 31) ^ (args.seed * 2654435761)) >>> 0;
       for (const agent of args.agents) {
         jobs.push({
@@ -294,7 +335,8 @@ export function est(xs: readonly number[]): Est {
   return { mean: m, half: 1.96 * Math.sqrt(v / n), n };
 }
 
-const fmt = (e: Est, d = 2) => `${e.mean.toFixed(d)} ±${Number.isFinite(e.half) ? e.half.toFixed(d) : "?"}`;
+const fmt = (e: Est, d = 2) =>
+  `${e.mean.toFixed(d)} ±${Number.isFinite(e.half) ? e.half.toFixed(d) : "?"}`;
 
 export function report(results: JobResult[], agents: string[], settings: string[]): string {
   const lines: string[] = [];
@@ -335,7 +377,11 @@ export function report(results: JobResult[], agents: string[], settings: string[
       );
     }
     const errs = rs.filter((r) => r.errors > 0);
-    if (errs.length) lines.push("", `agent errors in ${errs.length} games, first: ${errs[0]!.firstError?.split("\n")[0]}`);
+    if (errs.length)
+      lines.push(
+        "",
+        `agent errors in ${errs.length} games, first: ${errs[0]!.firstError?.split("\n")[0]}`,
+      );
     lines.push("");
   }
   return lines.join("\n");
@@ -343,12 +389,19 @@ export function report(results: JobResult[], agents: string[], settings: string[
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const field = args.settings.includes("field") ? await fieldTables(args.matches, args.matchOffset) : [];
+  const field = args.settings.includes("field")
+    ? await fieldTables(args.matches, args.matchOffset)
+    : [];
   const top = args.settings.includes("top") ? await topBots() : [];
   const jobs = buildJobs(args, field, top);
   const t0 = performance.now();
   let last = 0;
-  const pool = new EvalPool({ workers: args.workers, variants: args.variants, model: args.model, budgetMs: args.budgetMs });
+  const pool = new EvalPool({
+    workers: args.workers,
+    variants: args.variants,
+    model: args.model,
+    budgetMs: args.budgetMs,
+  });
   const results = await pool.run(jobs, (n) => {
     const now = performance.now();
     if (now - last > 5000) {

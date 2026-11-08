@@ -52,14 +52,30 @@ export function cloneCheck(dbPath: string, nBots: number, nMatches: number): Clo
         .all(botId, nMatches)
         .map((r) => num(r.match_id));
       const real: Record<keyof Stats, number[]> = {
-        meanScore: [], winRate: [], meanTopBid: [], meanPaid: [], tilesWon: [], wordsPerMatch: [], meanWordLen: [], tilesLeft: [],
+        meanScore: [],
+        winRate: [],
+        meanTopBid: [],
+        meanPaid: [],
+        tilesWon: [],
+        wordsPerMatch: [],
+        meanWordLen: [],
+        tilesLeft: [],
       };
       const sim: Record<keyof Stats, number[]> = {
-        meanScore: [], winRate: [], meanTopBid: [], meanPaid: [], tilesWon: [], wordsPerMatch: [], meanWordLen: [], tilesLeft: [],
+        meanScore: [],
+        winRate: [],
+        meanTopBid: [],
+        meanPaid: [],
+        tilesWon: [],
+        wordsPerMatch: [],
+        meanWordLen: [],
+        tilesLeft: [],
       };
       for (const matchId of matches) {
         const seats = db
-          .prepare("SELECT bot_id, is_sim, strategy, final_score, place, won_tiles, words, tiles_left FROM match_seat WHERE match_id = ?")
+          .prepare(
+            "SELECT bot_id, is_sim, strategy, final_score, place, won_tiles, words, tiles_left FROM match_seat WHERE match_id = ?",
+          )
           .all(matchId);
         const me = seats.find((s) => num(s.bot_id) === botId)!;
         real.meanScore.push(num(me.final_score));
@@ -73,16 +89,26 @@ export function cloneCheck(dbPath: string, nBots: number, nMatches: number): Clo
           real.meanPaid.push(num(a.paid));
           if (a.top_bid !== null) real.meanTopBid.push(num(a.top_bid));
         }
-        for (const w of db.prepare("SELECT len FROM play_obs WHERE match_id = ? AND bot_id = ?").all(matchId, botId)) {
+        for (const w of db
+          .prepare("SELECT len FROM play_obs WHERE match_id = ? AND bot_id = ?")
+          .all(matchId, botId)) {
           real.meanWordLen.push(num(w.len));
         }
 
         const specs: SeatSpec[] = seats.map((s, i) =>
           num(s.is_sim) === 1
             ? { botId: num(s.bot_id), simStrategy: String(s.strategy) }
-            : { botId: num(s.bot_id), agent: createCloneAgent(num(s.bot_id), { seed: matchId * 31 + i, model }) },
+            : {
+                botId: num(s.bot_id),
+                agent: createCloneAgent(num(s.bot_id), { seed: matchId * 31 + i, model }),
+              },
         );
-        const res = runMatch(specs, rng32(matchId), () => ix.words, (w) => dict.has(w));
+        const res = runMatch(
+          specs,
+          rng32(matchId),
+          () => ix.words,
+          (w) => dict.has(w),
+        );
         const r = res.find((x) => x.botId === botId)!;
         sim.meanScore.push(r.score);
         sim.winRate.push(r.place === 1 ? 1 : 0);
@@ -103,7 +129,13 @@ export function cloneCheck(dbPath: string, nBots: number, nMatches: number): Clo
         meanWordLen: mean(x.meanWordLen),
         tilesLeft: mean(x.tilesLeft),
       });
-      rows.push({ botId, name: String(b.name), matches: matches.length, real: summarize(real), clone: summarize(sim) });
+      rows.push({
+        botId,
+        name: String(b.name),
+        matches: matches.length,
+        real: summarize(real),
+        clone: summarize(sim),
+      });
     }
   } finally {
     db.close();
@@ -133,7 +165,8 @@ export function formatCloneCheck(rows: CloneRow[]): string {
 
 function main(): void {
   const argv = process.argv.slice(2);
-  const arg = (name: string, d: number) => (argv.includes(name) ? Number(argv[argv.indexOf(name) + 1]) : d);
+  const arg = (name: string, d: number) =>
+    argv.includes(name) ? Number(argv[argv.indexOf(name) + 1]) : d;
   const t = Date.now();
   const rows = cloneCheck(DEFAULT_DB_PATH, arg("--bots", 12), arg("--matches", 40));
   console.log(formatCloneCheck(rows));

@@ -36,8 +36,16 @@ export function equity(s: Standing, lambda: number, p: Params): number {
   return s.score + lambda * s.balance + p.equityPerTile * s.rackSize;
 }
 
-export function placeView(me: Standing, rivals: readonly Standing[], lambda: number, remaining: number, p: Params): PlaceView {
-  const sigma = Math.sqrt(p.placeSigmaMin ** 2 + p.placeSigma0 ** 2 * Math.max(0, Math.min(1, remaining)));
+export function placeView(
+  me: Standing,
+  rivals: readonly Standing[],
+  lambda: number,
+  remaining: number,
+  p: Params,
+): PlaceView {
+  const sigma = Math.sqrt(
+    p.placeSigmaMin ** 2 + p.placeSigma0 ** 2 * Math.max(0, Math.min(1, remaining)),
+  );
   const mine = equity(me, lambda, p);
   const f: number[] = [];
   let sum = 0;
@@ -51,7 +59,8 @@ export function placeView(me: Standing, rivals: readonly Standing[], lambda: num
   }
   let phiSum = 0;
   for (const r of rivals) phiSum += phi((mine - equity(r, lambda, p)) / sigma);
-  const weights = sum > 0 ? f.map((x) => x / sum) : rivals.map(() => 1 / Math.max(1, rivals.length));
+  const weights =
+    sum > 0 ? f.map((x) => x / sum) : rivals.map(() => 1 / Math.max(1, rivals.length));
   const tilt = phiSum > 0 ? Math.max(-2, Math.min(2, tiltNum / phiSum)) : 0;
   return { weights, tilt, sigma };
 }

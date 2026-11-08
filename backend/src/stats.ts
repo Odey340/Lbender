@@ -65,14 +65,38 @@ export class Sums<F extends string> {
 }
 
 export const MARKET_FIELDS = [
-  "n", "nSold", "nSimWin", "sumPaid", "sumsqPaid", "nTop", "sumTop", "sumsqTop",
+  "n",
+  "nSold",
+  "nSimWin",
+  "sumPaid",
+  "sumsqPaid",
+  "nTop",
+  "sumTop",
+  "sumsqTop",
 ] as const;
 export const OPP_FIELDS = [
-  "nObs", "nWon", "nEq", "nZero", "sumEq", "sumsqEq", "nLe", "sumLe", "sumsqLe", "nGe", "sumGe",
+  "nObs",
+  "nWon",
+  "nEq",
+  "nZero",
+  "sumEq",
+  "sumsqEq",
+  "nLe",
+  "sumLe",
+  "sumsqLe",
+  "nGe",
+  "sumGe",
 ] as const;
 export const SEAT_FIELDS = [
-  "matches", "wins", "sumPlace", "sumScore", "sumWonTiles", "sumPaid", "sumWords",
-  "sumLettersPlayed", "sumTilesLeft",
+  "matches",
+  "wins",
+  "sumPlace",
+  "sumScore",
+  "sumWonTiles",
+  "sumPaid",
+  "sumWords",
+  "sumLettersPlayed",
+  "sumTilesLeft",
 ] as const;
 
 /** All three sum tables' pending deltas for one reducer call. */

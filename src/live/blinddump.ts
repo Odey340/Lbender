@@ -29,10 +29,15 @@ export interface BlindDumpConfig {
   maxBag: number;
 }
 
-export const DEFAULT_BLIND_DUMP: Readonly<BlindDumpConfig> = Object.freeze({ enabled: true, silenceMs: 0, maxBag: 8 });
+export const DEFAULT_BLIND_DUMP: Readonly<BlindDumpConfig> = Object.freeze({
+  enabled: true,
+  silenceMs: 0,
+  maxBag: 8,
+});
 
 export function blindDumpConfig(env: NodeJS.ProcessEnv = process.env): BlindDumpConfig {
-  const num = (v: string | undefined, d: number) => (v !== undefined && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
+  const num = (v: string | undefined, d: number) =>
+    v !== undefined && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
   return {
     enabled: env.DAMO_BLIND_DUMP !== "0",
     silenceMs: Math.max(0, num(env.DAMO_BLIND_DUMP_MS, DEFAULT_BLIND_DUMP.silenceMs)),
@@ -58,7 +63,13 @@ export function estimatedBag(cachedBag: number, silentMs: number, auctionMs: num
 }
 
 /** True when the endgame blind dump should fire now. */
-export function blindDumpDue(nowMs: number, lastFeedMs: number, auctionMs: number, cachedBag: number, cfg: BlindDumpConfig): boolean {
+export function blindDumpDue(
+  nowMs: number,
+  lastFeedMs: number,
+  auctionMs: number,
+  cachedBag: number,
+  cfg: BlindDumpConfig,
+): boolean {
   if (!cfg.enabled) return false;
   const silent = nowMs - lastFeedMs;
   if (!(silent > blindSilenceMs(auctionMs, cfg))) return false;

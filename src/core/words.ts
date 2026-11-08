@@ -17,13 +17,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { LETTER_VALUES, lengthMultiplier, wordReward, type Counts } from "./rules.js";
 
-export const WORDLIST_PATH = path.join(
-  import.meta.dirname,
-  "..",
-  "..",
-  "data",
-  "wordlist.txt",
-);
+export const WORDLIST_PATH = path.join(import.meta.dirname, "..", "..", "data", "wordlist.txt");
 
 /**
  * Letter order inside signatures, rarest in the dictionary first. Rare letters
@@ -150,7 +144,10 @@ export class WordEngine {
     // CRLF endings, which turned every word into "WORD\r", left the engine
     // with no words at all and made Damo bid ~0 and never play (live, on
     // Windows). The server's own file is LF, so this changes nothing there.
-    const lex = text.replace(/\r/g, "").split("\n").filter((l) => l.length > 0);
+    const lex = text
+      .replace(/\r/g, "")
+      .split("\n")
+      .filter((l) => l.length > 0);
     this.lexWords = lex;
     let sorted = true;
     for (let i = 1; i < lex.length; i++) {
@@ -232,7 +229,8 @@ export class WordEngine {
     const keys = new Float64Array(W);
     for (let i = 0; i < W; i++) {
       const g = wGroup[i]!;
-      keys[i] = ((1023 - this.gReward[g]!) * 64 + (63 - Math.min(63, this.gLen[g]!))) * span + wAlpha[i]!;
+      keys[i] =
+        ((1023 - this.gReward[g]!) * 64 + (63 - Math.min(63, this.gLen[g]!))) * span + wAlpha[i]!;
     }
     keys.sort();
     this.wRank = new Int32Array(W);
@@ -521,7 +519,8 @@ export class WordEngine {
     // Most candidates fail on a letter that's already gone; a bitmask of the
     // letters still on the rack rejects those in one test.
     const candMask = new Int32Array(C);
-    for (let c = 0; c < C; c++) for (let p = off[c]!; p < off[c + 1]!; p++) candMask[c] |= 1 << cj[p]!;
+    for (let c = 0; c < C; c++)
+      for (let p = off[c]!; p < off[c + 1]!; p++) candMask[c] |= 1 << cj[p]!;
     let rmask = 0;
     for (let j = 0; j < K; j++) if (R[j]) rmask |= 1 << j;
     const fits = (c: number): boolean => {
@@ -565,7 +564,13 @@ export class WordEngine {
       return s;
     };
     // Fewest of the remaining tiles that must be used to gain `need` more.
-    const minTilesFor = (L: number, cap: number, ub: number, need: number, nRem: number): number => {
+    const minTilesFor = (
+      L: number,
+      cap: number,
+      ub: number,
+      need: number,
+      nRem: number,
+    ): number => {
       let cmin = Infinity;
       for (let j = L; j < K; j++) if (R[j]) cmin = Math.min(cmin, vj[j]! * Math.min(m[j]!, cap));
       return nRem - Math.floor((ub - need + EPS) / cmin);

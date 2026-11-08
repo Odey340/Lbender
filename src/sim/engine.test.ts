@@ -3,16 +3,38 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BAG_SIZE, DEFAULT_BAG, LETTERS, STARTING_BALANCE, countsOf, letterValue, totalTiles, wordReward } from "../core/rules.js";
+import {
+  BAG_SIZE,
+  DEFAULT_BAG,
+  LETTERS,
+  STARTING_BALANCE,
+  countsOf,
+  letterValue,
+  totalTiles,
+  wordReward,
+} from "../core/rules.js";
 import type { Agent, AuctionView, MatchView } from "../core/types.js";
 import { countsToMap, findBestPlayable } from "./dictionary.js";
-import { Engine, decideBid, runMatch, type EngineSeat, type MatchSeat, type SimStrategy } from "./engine.js";
+import {
+  Engine,
+  decideBid,
+  runMatch,
+  type EngineSeat,
+  type MatchSeat,
+  type SimStrategy,
+} from "./engine.js";
 import { ServerRandom } from "./rng.js";
 
-const idle = (n: number): EngineSeat[] => Array.from({ length: n }, (_, i) => ({ botId: 101 + i, isSim: false }));
-const sims = (...s: SimStrategy[]): EngineSeat[] => s.map((strategy, i) => ({ botId: 1 + i, isSim: true, strategy }));
+const idle = (n: number): EngineSeat[] =>
+  Array.from({ length: n }, (_, i) => ({ botId: 101 + i, isSim: false }));
+const sims = (...s: SimStrategy[]): EngineSeat[] =>
+  s.map((strategy, i) => ({ botId: 1 + i, isSim: true, strategy }));
 
-function started(seats: EngineSeat[], seed = 1, extra: Partial<ConstructorParameters<typeof Engine>[0]> = {}): Engine {
+function started(
+  seats: EngineSeat[],
+  seed = 1,
+  extra: Partial<ConstructorParameters<typeof Engine>[0]> = {},
+): Engine {
   const e = new Engine({ seats, seed, ...extra });
   assert.deepEqual(e.start(), { ok: undefined });
   return e;
@@ -48,7 +70,21 @@ test("start deals 5 tiles each and opens the first auction", () => {
 
 test("a full match has 98 - 5n auctions and every tile is accounted for", () => {
   for (const n of [2, 4, 6]) {
-    const e = started(sims(...(["Aggressive", "ValueBidder", "Cheapskate", "Aggressive", "ValueBidder", "Cheapskate"] as SimStrategy[]).slice(0, n)), n);
+    const e = started(
+      sims(
+        ...(
+          [
+            "Aggressive",
+            "ValueBidder",
+            "Cheapskate",
+            "Aggressive",
+            "ValueBidder",
+            "Cheapskate",
+          ] as SimStrategy[]
+        ).slice(0, n),
+      ),
+      n,
+    );
     let closes = 0;
     while (!e.closeAuction()) closes++;
     closes++;
@@ -64,11 +100,19 @@ test("a full match has 98 - 5n auctions and every tile is accounted for", () => 
 
 test("balances equal start minus spend plus score (both auction types)", () => {
   for (const auctionType of ["Vickrey", "FirstPrice"] as const) {
-    const e = started(sims("Aggressive", "ValueBidder", "Cheapskate", "Aggressive"), 9, { auctionType });
+    const e = started(sims("Aggressive", "ValueBidder", "Cheapskate", "Aggressive"), 9, {
+      auctionType,
+    });
     while (!e.closeAuction());
     for (const p of e.participants) {
-      const spent = e.history.reduce((s, h) => s + (h.kind === "auction" && h.winnerBotId === p.botId ? h.paid : 0), 0);
-      const rewards = e.history.reduce((s, h) => s + (h.kind === "word" && h.botId === p.botId ? h.reward : 0), 0);
+      const spent = e.history.reduce(
+        (s, h) => s + (h.kind === "auction" && h.winnerBotId === p.botId ? h.paid : 0),
+        0,
+      );
+      const rewards = e.history.reduce(
+        (s, h) => s + (h.kind === "word" && h.botId === p.botId ? h.reward : 0),
+        0,
+      );
       assert.equal(p.score, rewards);
       assert.equal(p.balance, STARTING_BALANCE - spent + p.score, `${auctionType} bot ${p.botId}`);
       assert.ok(p.balance >= 0);
@@ -118,7 +162,11 @@ test("server rng: the start transaction deals, draws the first letter, then jitt
   const letter = replayDraw(r, bag, total);
   assert.equal(e.auction!.letter, letter);
   for (const s of seats.filter((x) => x.isSim)) {
-    assert.equal(e.pending.get(s.botId), decideBid(s.strategy!, letter, 100, r.int(-2, 2)), `sim ${s.botId}`);
+    assert.equal(
+      e.pending.get(s.botId),
+      decideBid(s.strategy!, letter, 100, r.int(-2, 2)),
+      `sim ${s.botId}`,
+    );
   }
   assert.deepEqual(e.bag, bag);
 });
@@ -130,7 +178,9 @@ test("server rng: a close shuffles the positive bids, then draws the next letter
     e.submitBid(101, v);
     e.submitBid(102, v);
     e.submitBid(103, 0);
-    const bids = [...e.pending].filter(([, a]) => a > 0).map(([botId, amount]) => ({ botId, amount }));
+    const bids = [...e.pending]
+      .filter(([, a]) => a > 0)
+      .map(([botId, amount]) => ({ botId, amount }));
     const bag = e.bag.slice();
     const total = { n: e.bagTotal };
     e.closeAuction();
@@ -141,7 +191,11 @@ test("server rng: a close shuffles the positive bids, then draws the next letter
     const letter = replayDraw(r, bag, total);
     assert.equal(e.auction!.letter, letter, `seed ${seed}: next letter`);
     const sim = e.participant(1)!;
-    assert.equal(e.pending.get(1), decideBid("ValueBidder", letter, sim.balance, r.int(-2, 2)), `seed ${seed}: jitter`);
+    assert.equal(
+      e.pending.get(1),
+      decideBid("ValueBidder", letter, sim.balance, r.int(-2, 2)),
+      `seed ${seed}: jitter`,
+    );
   }
 });
 
@@ -240,7 +294,10 @@ test("ties are broken at random and the winner pays the tied amount", () => {
       assert.equal(r.paid, 1);
       wins.set(r.winnerBotId!, (wins.get(r.winnerBotId!) ?? 0) + 1);
     }
-    assert.ok((wins.get(101) ?? 0) > 15 && (wins.get(102) ?? 0) > 15, `${auctionType}: ${[...wins]}`);
+    assert.ok(
+      (wins.get(101) ?? 0) > 15 && (wins.get(102) ?? 0) > 15,
+      `${auctionType}: ${[...wins]}`,
+    );
   }
   const e = started(idle(3));
   e.submitBid(101, 6);
@@ -279,20 +336,34 @@ test("sims bid at auction open within base -2..+2, uniformly", () => {
         assert.equal(bid, undefined, "a sim with no coins doesn't bid");
         continue;
       }
-      assert.ok(bid !== undefined && bid >= lo && bid <= hi, `${p.strategy} bid ${bid} on ${letter}, outside ${lo}..${hi}`);
+      assert.ok(
+        bid !== undefined && bid >= lo && bid <= hi,
+        `${p.strategy} bid ${bid} on ${letter}, outside ${lo}..${hi}`,
+      );
       // Unclamped cases reveal the jitter itself.
       const base = decideBid(p.strategy!, letter, 1e9, 0);
-      if (base - 2 >= 1 && base + 2 <= p.balance) offsets.set(bid - base, (offsets.get(bid - base) ?? 0) + 1);
+      if (base - 2 >= 1 && base + 2 <= p.balance)
+        offsets.set(bid - base, (offsets.get(bid - base) ?? 0) + 1);
     }
     e.closeAuction();
   }
-  assert.deepEqual([...offsets.keys()].sort((a, b) => a - b), [-2, -1, 0, 1, 2]);
+  assert.deepEqual(
+    [...offsets.keys()].sort((a, b) => a - b),
+    [-2, -1, 0, 1, 2],
+  );
 });
 
 test("a sim that wins plays findBestPlayable(rack, 3): longest, then alphabetical", () => {
-  const e = started([{ botId: 101, isSim: false }, { botId: 2, isSim: true, strategy: "ValueBidder" }], 1, {
-    literalSimWords: true,
-  });
+  const e = started(
+    [
+      { botId: 101, isSim: false },
+      { botId: 2, isSim: true, strategy: "ValueBidder" },
+    ],
+    1,
+    {
+      literalSimWords: true,
+    },
+  );
   e.pending.clear();
   setRack(e, 2, "CA");
   e.auction!.letter = "T";
@@ -310,7 +381,13 @@ test("a sim that wins plays findBestPlayable(rack, 3): longest, then alphabetica
 });
 
 test("a sim only plays words of 3+ letters, and only after winning", () => {
-  const e = started([{ botId: 101, isSim: false }, { botId: 2, isSim: true, strategy: "ValueBidder" }], 1);
+  const e = started(
+    [
+      { botId: 101, isSim: false },
+      { botId: 2, isSim: true, strategy: "ValueBidder" },
+    ],
+    1,
+  );
   e.pending.clear();
   setRack(e, 2, "QJV");
   e.auction!.letter = "O";
@@ -387,7 +464,13 @@ test("the match ends at the last close; nobody can play after it", () => {
 });
 
 test("a sim still plays the last tile inside the final close", () => {
-  const e = started([{ botId: 101, isSim: false }, { botId: 2, isSim: true, strategy: "Aggressive" }], 2);
+  const e = started(
+    [
+      { botId: 101, isSim: false },
+      { botId: 2, isSim: true, strategy: "Aggressive" },
+    ],
+    2,
+  );
   while (e.bagTotal > 0) e.closeAuction();
   e.pending.clear();
   setRack(e, 2, "CA");
@@ -404,16 +487,26 @@ test("views show only what a live bot can see", () => {
   e.submitBid(102, 3);
   const v = e.viewFor(101);
   assert.deepEqual(Object.keys(v).sort(), [
-    "auctionType", "bagTotal", "history", "matchId", "myBotId", "myRack", "nowMs", "participants", "round", "startingRackSize",
+    "auctionType",
+    "bagTotal",
+    "history",
+    "matchId",
+    "myBotId",
+    "myRack",
+    "nowMs",
+    "participants",
+    "round",
+    "startingRackSize",
   ]);
-  for (const p of v.participants) assert.deepEqual(Object.keys(p).sort(), ["balance", "botId", "isSim", "score"]);
+  for (const p of v.participants)
+    assert.deepEqual(Object.keys(p).sort(), ["balance", "botId", "isSim", "score"]);
   assert.deepEqual(v.myRack, e.participant(101)!.rack);
   assert.equal(v.bagTotal, e.bagTotal);
   assert.equal(v.round, 1);
   assert.equal(v.history.length, 0);
   // Nothing in the view mentions the pending bids, other racks or the bag.
   const text = JSON.stringify(v);
-  assert.ok(!text.includes("pending") && !text.includes("rack\"") && !text.includes("bag\""));
+  assert.ok(!text.includes("pending") && !text.includes('rack"') && !text.includes('bag"'));
   // Views are copies: scribbling on one can't change the match.
   v.myRack[0] = 99;
   v.participants[0]!.balance = 0;
@@ -449,16 +542,27 @@ test("each round: words, then bids, then the close; no plays after the last clos
     (v) => (v.round === 1 ? ["NOTAWORD"] : []),
     (v) => {
       const me = v.participants.find((p) => p.botId === v.myBotId)!;
-      seen.push({ round: v.round, balance: me.balance, words: v.history.filter((h) => h.kind === "word").length });
+      seen.push({
+        round: v.round,
+        balance: me.balance,
+        words: v.history.filter((h) => h.kind === "word").length,
+      });
       return 1;
     },
   );
-  const out = runMatch({ seats: [{ botId: 101, isSim: false, agent }, { botId: 102, isSim: false }], seed: 3 });
+  const out = runMatch({
+    seats: [
+      { botId: 101, isSim: false, agent },
+      { botId: 102, isSim: false },
+    ],
+    seed: 3,
+  });
   const rounds = BAG_SIZE - 10;
   assert.equal(out.rounds, rounds);
   // chooseWords then quickBid every round, nothing after the last close.
   assert.equal(agent.calls.length, 2 * rounds);
-  for (let r = 1; r <= rounds; r++) assert.deepEqual(agent.calls.slice(2 * r - 2, 2 * r), [`words:${r}`, `bid:${r}`]);
+  for (let r = 1; r <= rounds; r++)
+    assert.deepEqual(agent.calls.slice(2 * r - 2, 2 * r), [`words:${r}`, `bid:${r}`]);
   // It was the only bidder at 1 coin each, so it won every tile...
   assert.equal(out.seats[0]!.balance, STARTING_BALANCE - rounds);
   // ...and never played, so all of them are dead at the end.
@@ -476,7 +580,10 @@ test("words are applied before the same round's bid sees the balance", () => {
       return 0;
     },
   );
-  const seats: MatchSeat[] = [{ botId: 101, isSim: false, agent }, { botId: 102, isSim: false }];
+  const seats: MatchSeat[] = [
+    { botId: 101, isSim: false, agent },
+    { botId: 102, isSim: false },
+  ];
   const rackForCat = countsOf("CAT");
   // Find a deal that gives 101 C, A and T.
   let seed = 0;
@@ -494,10 +601,17 @@ test("words are applied before the same round's bid sees the balance", () => {
 
 test("refineBid replaces the quick bid; null keeps it; 0 from quickBid sends nothing", () => {
   const mk = (quick: number, refined: number | null | undefined) =>
-    new Scripted(() => [], () => quick, refined === undefined ? undefined : () => refined);
+    new Scripted(
+      () => [],
+      () => quick,
+      refined === undefined ? undefined : () => refined,
+    );
   const firstResult = (a: Agent, b: Agent) => {
     const out = runMatch({
-      seats: [{ botId: 101, isSim: false, agent: a }, { botId: 102, isSim: false, agent: b }],
+      seats: [
+        { botId: 101, isSim: false, agent: a },
+        { botId: 102, isSim: false, agent: b },
+      ],
       seed: 1,
     });
     const first = out.engine.history.find((h) => h.kind === "auction");
@@ -513,7 +627,13 @@ test("refineBid replaces the quick bid; null keeps it; 0 from quickBid sends not
   // A refine over the balance is refused and the quick bid stands.
   const over = firstResult(mk(3, 500), mk(2, null));
   assert.deepEqual(over.result, [101, 2]);
-  assert.deepEqual(over.engine.rejections[0], { round: 1, botId: 101, kind: "bid", input: "500", err: "Insufficient balance" });
+  assert.deepEqual(over.engine.rejections[0], {
+    round: 1,
+    botId: 101,
+    kind: "bid",
+    input: "500",
+    err: "Insufficient balance",
+  });
 });
 
 test("agent exceptions are counted, or rethrown with strict", () => {
@@ -523,16 +643,29 @@ test("agent exceptions are counted, or rethrown with strict", () => {
     },
     () => 1,
   );
-  const out = runMatch({ seats: [{ botId: 101, isSim: false, agent: boom }, ...sims("ValueBidder")], seed: 1 });
+  const out = runMatch({
+    seats: [{ botId: 101, isSim: false, agent: boom }, ...sims("ValueBidder")],
+    seed: 1,
+  });
   assert.equal(out.seats[0]!.agentErrors, BAG_SIZE - 10);
   assert.match(out.seats[0]!.firstError!, /boom/);
-  assert.throws(() => runMatch({ seats: [{ botId: 101, isSim: false, agent: boom }], seed: 1, strict: true }), /boom/);
+  assert.throws(
+    () => runMatch({ seats: [{ botId: 101, isSim: false, agent: boom }], seed: 1, strict: true }),
+    /boom/,
+  );
 });
 
 test("agents act in a fresh random order each round", () => {
   const order: number[] = [];
-  const mk = (id: number) => new Scripted(() => (order.push(id), []), () => 0);
-  runMatch({ seats: [101, 102, 103].map((botId) => ({ botId, isSim: false, agent: mk(botId) })), seed: 8 });
+  const mk = (id: number) =>
+    new Scripted(
+      () => (order.push(id), []),
+      () => 0,
+    );
+  runMatch({
+    seats: [101, 102, 103].map((botId) => ({ botId, isSim: false, agent: mk(botId) })),
+    seed: 8,
+  });
   const firsts = new Set<number>();
   for (let i = 0; i < order.length; i += 3) firsts.add(order[i]!);
   assert.equal(firsts.size, 3);
@@ -540,5 +673,8 @@ test("agents act in a fresh random order each round", () => {
 
 test("letterValue and LETTERS agree with the server tables", () => {
   assert.equal(LETTERS.length, 26);
-  assert.equal([...LETTERS].reduce((s, c) => s + letterValue(c), 0), 87);
+  assert.equal(
+    [...LETTERS].reduce((s, c) => s + letterValue(c), 0),
+    87,
+  );
 });

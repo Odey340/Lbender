@@ -48,12 +48,17 @@ interface Match {
 }
 
 if (!fs.existsSync(logs)) {
-  console.error(`No '${logs}' folder: run this from the Damo folder, after the bot has played some matches.`);
+  console.error(
+    `No '${logs}' folder: run this from the Damo folder, after the bot has played some matches.`,
+  );
   process.exit(2);
 }
 const matches: Match[] = [];
 const twins = new Set<string>();
-for (const f of fs.readdirSync(logs).filter((f) => /^decisions-.*\.jsonl$/.test(f)).sort()) {
+for (const f of fs
+  .readdirSync(logs)
+  .filter((f) => /^decisions-.*\.jsonl$/.test(f))
+  .sort()) {
   for (const line of fs.readFileSync(path.join(logs, f), "utf8").split(/\r?\n/)) {
     if (!line.trim()) continue;
     let r: Record<string, any>;
@@ -102,8 +107,12 @@ const ci = (xs: number[]) => (xs.length > 1 ? (1.96 * sd(xs)) / Math.sqrt(xs.len
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : "-");
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : "-");
 
-console.log(`${usable.length} matches${twins.size ? ` (${[...twins].filter((t) => matches.some((m) => m.match === t)).length} left out: another copy was bidding)` : ""}\n`);
-console.log("| group | matches | avg place (lower = better) | wins | avg score | coins left at end | coins spent | tiles won | 7+ letter words | tiles unplayed |");
+console.log(
+  `${usable.length} matches${twins.size ? ` (${[...twins].filter((t) => matches.some((m) => m.match === t)).length} left out: another copy was bidding)` : ""}\n`,
+);
+console.log(
+  "| group | matches | avg place (lower = better) | wins | avg score | coins left at end | coins spent | tiles won | 7+ letter words | tiles unplayed |",
+);
 console.log("|---|---|---|---|---|---|---|---|---|---|");
 for (const [k, ms] of groups) {
   const place = ms.map((m) => m.place);
@@ -122,10 +131,20 @@ if (groups.size === 2) {
   const se = Math.sqrt(sd(pa) ** 2 / pa.length + sd(pb) ** 2 / pb.length);
   const lo = diff - 1.96 * se;
   const hi = diff + 1.96 * se;
-  console.log(`\nAvg place, ${kb} minus ${ka}: ${diff >= 0 ? "+" : ""}${f2(diff)} (95% range ${f2(lo)} to ${f2(hi)}; negative = ${kb} is better)`);
+  console.log(
+    `\nAvg place, ${kb} minus ${ka}: ${diff >= 0 ? "+" : ""}${f2(diff)} (95% range ${f2(lo)} to ${f2(hi)}; negative = ${kb} is better)`,
+  );
   const n = Math.min(pa.length, pb.length);
-  if (n < 30) console.log(`Too early to tell: only ${n} matches in the smaller group. Aim for 50+ in each.`);
-  else if (hi < 0) console.log(`Verdict: '${kb}' is better, and the gap is bigger than luck would explain.`);
-  else if (lo > 0) console.log(`Verdict: '${kb}' is worse, and the gap is bigger than luck would explain. Go back to '${ka}'.`);
-  else console.log("Verdict: no clear difference yet. Keep playing, or keep the defaults if it stays this close.");
+  if (n < 30)
+    console.log(`Too early to tell: only ${n} matches in the smaller group. Aim for 50+ in each.`);
+  else if (hi < 0)
+    console.log(`Verdict: '${kb}' is better, and the gap is bigger than luck would explain.`);
+  else if (lo > 0)
+    console.log(
+      `Verdict: '${kb}' is worse, and the gap is bigger than luck would explain. Go back to '${ka}'.`,
+    );
+  else
+    console.log(
+      "Verdict: no clear difference yet. Keep playing, or keep the defaults if it stays this close.",
+    );
 }

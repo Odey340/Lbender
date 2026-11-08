@@ -35,13 +35,19 @@ test("drawInto never exceeds the pool and honours zero weights", () => {
     const out = emptyCounts();
     drawInto(pool, 5, rand, out);
     for (let i = 0; i < 26; i++) assert.ok(out[i]! <= pool[i]!);
-    assert.equal(out.reduce((a, b) => a + b, 0), 5);
+    assert.equal(
+      out.reduce((a, b) => a + b, 0),
+      5,
+    );
     const w = new Float64Array(26).fill(1);
     w[idx("Z")] = 0;
     const out2 = emptyCounts();
     drawInto(pool, 6, rand, out2, w);
     assert.equal(out2[idx("Z")], 0);
-    assert.equal(out2.reduce((a, b) => a + b, 0), 4);
+    assert.equal(
+      out2.reduce((a, b) => a + b, 0),
+      4,
+    );
   }
 });
 

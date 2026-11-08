@@ -36,7 +36,8 @@ function decode(v: unknown, t: AlgType): unknown {
     if (variants.length === 2 && name === "some" && colName(variants[1]!, 1) === "none") {
       return decode(payload, variant!.algebraic_type);
     }
-    if (name === "none" && variants.length === 2 && colName(variants[0]!, 0) === "some") return null;
+    if (name === "none" && variants.length === 2 && colName(variants[0]!, 0) === "some")
+      return null;
     const inner = variant?.algebraic_type as { Product?: { elements: unknown[] } } | undefined;
     if (inner?.Product && inner.Product.elements.length === 0) return name;
     return { [name]: variant ? decode(payload, variant.algebraic_type) : payload };
@@ -67,12 +68,22 @@ export function decodeRows(res: SqlResult): Row[] {
   });
 }
 
-export async function sql(host: string, db: string, query: string, timeoutMs = 15_000): Promise<Row[]> {
+export async function sql(
+  host: string,
+  db: string,
+  query: string,
+  timeoutMs = 15_000,
+): Promise<Row[]> {
   const lower = query.toLowerCase();
-  for (const t of FORBIDDEN_TABLES) if (lower.includes(t)) throw new Error(`refusing to query ${t}`);
+  for (const t of FORBIDDEN_TABLES)
+    if (lower.includes(t)) throw new Error(`refusing to query ${t}`);
   if (!/^\s*select\b/i.test(query)) throw new Error("read-only: SELECT only");
   const url = `${host.replace(/\/$/, "")}/v1/database/${encodeURIComponent(db)}/sql`;
-  const res = await fetch(url, { method: "POST", body: query, signal: AbortSignal.timeout(timeoutMs) });
+  const res = await fetch(url, {
+    method: "POST",
+    body: query,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
   const text = await res.text();
   if (!res.ok) throw new Error(`SQL ${res.status}: ${text.slice(0, 200)}`);
   const parsed = JSON.parse(text) as SqlResult[];

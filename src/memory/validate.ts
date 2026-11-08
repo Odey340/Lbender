@@ -20,14 +20,25 @@ import { isMain, rng32 } from "./util.js";
 
 export interface ValidationReport {
   at: string;
-  config: { halfLifeHours: number; oldVersionFactor: number; marketMaxShare: number; priorScale: number; emRounds: number };
+  config: {
+    halfLifeHours: number;
+    oldVersionFactor: number;
+    marketMaxShare: number;
+    priorScale: number;
+    emRounds: number;
+  };
   trainMatches: number;
   testMatches: number;
   cutoffUs: number;
   trainObs: number;
   testObs: number;
   fitSeconds: number;
-  logLik: { model: number; market: number; n: number; byData: { bucket: string; n: number; model: number; market: number }[] };
+  logLik: {
+    model: number;
+    market: number;
+    n: number;
+    byData: { bucket: string; n: number; model: number; market: number }[];
+  };
   winners: {
     n: number;
     coverage: { p: number; model: number; market: number }[];
@@ -43,13 +54,30 @@ export interface ValidationReport {
 }
 
 function scalePrior(p: PriorScales, k: number): PriorScales {
-  return { delta: p.delta * k, zeta: p.zeta * k, e: p.e * k, f: p.f * k, g: p.g * k, h: p.h * k, cov: p.cov * k, s: p.s * k };
+  return {
+    delta: p.delta * k,
+    zeta: p.zeta * k,
+    e: p.e * k,
+    f: p.f * k,
+    g: p.g * k,
+    h: p.h * k,
+    cov: p.cov * k,
+    s: p.s * k,
+  };
 }
 
-export function validate(dbPath: string, cfg: ModelConfig, holdout = 0.2, priorScale = 1): ValidationReport {
+export function validate(
+  dbPath: string,
+  cfg: ModelConfig,
+  holdout = 0.2,
+  priorScale = 1,
+): ValidationReport {
   const db = openDb(dbPath);
   try {
-    const ends = db.prepare("SELECT ended_us FROM match_info ORDER BY ended_us").all().map((r) => num(r.ended_us));
+    const ends = db
+      .prepare("SELECT ended_us FROM match_info ORDER BY ended_us")
+      .all()
+      .map((r) => num(r.ended_us));
     const cut = ends[Math.floor(ends.length * (1 - holdout)) - 1]!;
     const t0 = Date.now();
     const fit = fitAll(db, cfg, { beforeUs: cut });
@@ -62,13 +90,20 @@ export function validate(dbPath: string, cfg: ModelConfig, holdout = 0.2, priorS
     let llK = 0;
     let n = 0;
     const byData = new Map<string, { n: number; model: number; market: number }>();
-    const bucketOf = (k: number) => (k < 500 ? "<500" : k < 5000 ? "500-5k" : k < 20000 ? "5k-20k" : "20k+");
+    const bucketOf = (k: number) =>
+      k < 500 ? "<500" : k < 5000 ? "500-5k" : k < 20000 ? "5k-20k" : "20k+";
     const ps = [0.1, 0.25, 0.5, 0.75, 0.9];
     const cov = { model: ps.map(() => 0), market: ps.map(() => 0) };
     const pit = { model: new Array(10).fill(0), market: new Array(10).fill(0) };
     const pitVals = { model: [] as number[], market: [] as number[] };
     let nWin = 0;
-    const bins = Array.from({ length: 10 }, (_, i) => ({ lo: i / 10, hi: (i + 1) / 10, n: 0, predicted: 0, observed: 0 }));
+    const bins = Array.from({ length: 10 }, (_, i) => ({
+      lo: i / 10,
+      hi: (i + 1) / 10,
+      n: 0,
+      predicted: 0,
+      observed: 0,
+    }));
     let brierM = 0;
     let brierK = 0;
     let lossM = 0;
@@ -118,7 +153,10 @@ export function validate(dbPath: string, cfg: ModelConfig, holdout = 0.2, priorS
       const inProb = om !== null && rng() < 0.25;
       const needPmf = (won && o.kind === KIND_EQ) || inProb;
       if (!needPmf) continue;
-      const pmfs = { model: bidPmf(p, letter, o.phase, o.cap, o.rack), market: bidPmf(market, letter, o.phase, o.cap, o.rack) };
+      const pmfs = {
+        model: bidPmf(p, letter, o.phase, o.cap, o.rack),
+        market: bidPmf(market, letter, o.phase, o.cap, o.rack),
+      };
       const cdf = (pmf: Float64Array, x: number) => {
         let s = 0;
         for (let i = 0; i <= Math.min(x, pmf.length - 1); i++) s += pmf[i]!;
@@ -148,7 +186,8 @@ export function validate(dbPath: string, cfg: ModelConfig, holdout = 0.2, priorS
       }
       if (inProb && om !== null) {
         // Win if bid > rival max; an exact tie is a coin flip (two-way).
-        const pw = (pmf: Float64Array) => 1 - cdf(pmf, om) + 0.5 * (om >= 1 && om < pmf.length ? pmf[om]! : 0);
+        const pw = (pmf: Float64Array) =>
+          1 - cdf(pmf, om) + 0.5 * (om >= 1 && om < pmf.length ? pmf[om]! : 0);
         const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
         const pm = clamp01(pw(pmfs.model));
         const pk = clamp01(pw(pmfs.market));
@@ -191,19 +230,35 @@ export function validate(dbPath: string, cfg: ModelConfig, holdout = 0.2, priorS
         model: llM / n,
         market: llK / n,
         n,
-        byData: [...byData].map(([bucket, e]) => ({ bucket, n: e.n, model: e.model / e.n, market: e.market / e.n })),
+        byData: [...byData].map(([bucket, e]) => ({
+          bucket,
+          n: e.n,
+          model: e.model / e.n,
+          market: e.market / e.n,
+        })),
       },
       winners: {
         n: nWin,
-        coverage: ps.map((p, i) => ({ p, model: cov.model[i]! / nWin, market: cov.market[i]! / nWin })),
-        conditionalPitDeciles: { model: pit.model.map((x) => x / nWin), market: pit.market.map((x) => x / nWin) },
+        coverage: ps.map((p, i) => ({
+          p,
+          model: cov.model[i]! / nWin,
+          market: cov.market[i]! / nWin,
+        })),
+        conditionalPitDeciles: {
+          model: pit.model.map((x) => x / nWin),
+          market: pit.market.map((x) => x / nWin),
+        },
         conditionalKs: { model: ks(pitVals.model), market: ks(pitVals.market) },
       },
       winProb: {
         n: nProb,
         brier: { model: brierM / nProb, market: brierK / nProb },
         logLoss: { model: lossM / nProb, market: lossK / nProb },
-        bins: bins.map((b) => ({ ...b, predicted: b.n ? b.predicted / b.n : 0, observed: b.n ? b.observed / b.n : 0 })),
+        bins: bins.map((b) => ({
+          ...b,
+          predicted: b.n ? b.predicted / b.n : 0,
+          observed: b.n ? b.observed / b.n : 0,
+        })),
       },
     };
   } finally {
@@ -224,13 +279,18 @@ export function formatValidation(v: ValidationReport): string {
     "|---|---:|---:|---:|---:|",
     ...v.logLik.byData
       .sort((a, b) => a.bucket.localeCompare(b.bucket))
-      .map((b) => `| ${b.bucket} | ${b.n} | ${f(b.model, 4)} | ${f(b.market, 4)} | ${f(b.model - b.market, 4)} |`),
+      .map(
+        (b) =>
+          `| ${b.bucket} | ${b.n} | ${f(b.model, 4)} | ${f(b.market, 4)} | ${f(b.model - b.market, 4)} |`,
+      ),
     "",
     `Winning bids (${v.winners.n}): share at or below the predicted quantile. Winners are selected from the top, so raw coverage runs high by construction.`,
     "",
     "| quantile | model | market |",
     "|---:|---:|---:|",
-    ...v.winners.coverage.map((c) => `| q${Math.round(c.p * 100)} | ${f(c.model)} | ${f(c.market)} |`),
+    ...v.winners.coverage.map(
+      (c) => `| q${Math.round(c.p * 100)} | ${f(c.model)} | ${f(c.market)} |`,
+    ),
     "",
     `Selection-aware check (PIT of the winning bid given bid >= paid; uniform = calibrated): KS distance model ${f(v.winners.conditionalKs.model)} vs market ${f(v.winners.conditionalKs.market)}.`,
     `Deciles (model): ${v.winners.conditionalPitDeciles.model.map((x) => f(x, 2)).join(" ")}`,
@@ -240,7 +300,11 @@ export function formatValidation(v: ValidationReport): string {
     "",
     "| predicted | n | mean predicted | observed |",
     "|---|---:|---:|---:|",
-    ...v.winProb.bins.filter((b) => b.n > 0).map((b) => `| ${f(b.lo, 1)}-${f(b.hi, 1)} | ${b.n} | ${f(b.predicted)} | ${f(b.observed)} |`),
+    ...v.winProb.bins
+      .filter((b) => b.n > 0)
+      .map(
+        (b) => `| ${f(b.lo, 1)}-${f(b.hi, 1)} | ${b.n} | ${f(b.predicted)} | ${f(b.observed)} |`,
+      ),
   );
   return lines.join("\n");
 }

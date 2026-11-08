@@ -77,7 +77,9 @@ export function loadBots(db: Db): Map<number, BotMeta> {
     });
   }
   for (const r of db.prepare("SELECT bot_id, version, started_us FROM bot_version").all()) {
-    bots.get(num(r.bot_id))?.versions.push({ version: num(r.version), startedUs: num(r.started_us) });
+    bots
+      .get(num(r.bot_id))
+      ?.versions.push({ version: num(r.version), startedUs: num(r.started_us) });
   }
   return bots;
 }
@@ -101,7 +103,10 @@ export interface FitData {
   vickrey: Uint8Array;
 }
 
-export function loadFitData(db: Db, opts: { beforeUs?: number; auctionsOfBot?: number } = {}): FitData {
+export function loadFitData(
+  db: Db,
+  opts: { beforeUs?: number; auctionsOfBot?: number } = {},
+): FitData {
   const where: string[] = [];
   const args: number[] = [];
   if (opts.beforeUs !== undefined) {
@@ -197,7 +202,7 @@ export function buildSets(
     return w;
   };
 
-  for (let g0 = 0; g0 < d.n; ) {
+  for (let g0 = 0; g0 < d.n;) {
     let g1 = g0 + 1;
     while (g1 < d.n && d.auction[g1] === d.auction[g0]) g1++;
     const paid = d.paid[g0]!;
@@ -273,7 +278,9 @@ export function buildSets(
   for (const [id, rs] of rackSum) {
     meanRack.set(
       id,
-      Array.from({ length: N_PHASE }, (_, k) => (rs[N_PHASE + k]! > 0 ? rs[k]! / rs[N_PHASE + k]! : 7)),
+      Array.from({ length: N_PHASE }, (_, k) =>
+        rs[N_PHASE + k]! > 0 ? rs[k]! / rs[N_PHASE + k]! : 7,
+      ),
     );
   }
   return { perBot, market, counts, maxUs, meanRack, total };
@@ -297,7 +304,12 @@ export interface FitAllResult {
 export function fitAll(
   db: Db,
   cfg: ModelConfig = DEFAULT_CONFIG,
-  opts: { beforeUs?: number; warm?: Map<number, StoredFit>; warmMarket?: BidParams; maxIter?: number } = {},
+  opts: {
+    beforeUs?: number;
+    warm?: Map<number, StoredFit>;
+    warmMarket?: BidParams;
+    maxIter?: number;
+  } = {},
 ): FitAllResult {
   const bots = loadBots(db);
   const data = loadFitData(db, { beforeUs: opts.beforeUs });
@@ -320,7 +332,13 @@ export function fitFromData(
   let sets: Sets | undefined;
   for (let round = 0; round <= cfg.emRounds; round++) {
     const m = market;
-    sets = buildSets(data, bots, cfg, refUs, round === 0 ? undefined : (id) => out.get(id)?.params ?? m!);
+    sets = buildSets(
+      data,
+      bots,
+      cfg,
+      refUs,
+      round === 0 ? undefined : (id) => out.get(id)?.params ?? m!,
+    );
     market = fitBidModel(sets.market.build(), defaultParams(LETTER_VALUES), MARKET_PRIOR, {
       warm: market,
       maxIter: opts.maxIter ?? (round === 0 ? 400 : 150),
@@ -358,7 +376,14 @@ export function fitOneBot(
   const data = loadFitData(db, { auctionsOfBot: botId });
   let refUs = 0;
   for (let i = 0; i < data.n; i++) refUs = Math.max(refUs, data.ended[i]!);
-  const sets = buildSets(data, bots, cfg, refUs || Date.now() * 1000, cfg.emRounds > 0 ? paramsOf : undefined, botId);
+  const sets = buildSets(
+    data,
+    bots,
+    cfg,
+    refUs || Date.now() * 1000,
+    cfg.emRounds > 0 ? paramsOf : undefined,
+    botId,
+  );
   const b = sets.perBot.get(botId);
   if (!b) return undefined;
   const fit = fitBidModel(b.build(), market, cfg.botPrior, { warm, maxIter: 150 });
@@ -381,7 +406,11 @@ export function readStoredFits(db: Db): { market?: StoredFit; bots: Map<number, 
   }
   for (const r of rows) {
     try {
-      const j = JSON.parse(String(r.params)) as { tag: string; params: BidParams; meanRack: number[] };
+      const j = JSON.parse(String(r.params)) as {
+        tag: string;
+        params: BidParams;
+        meanRack: number[];
+      };
       if (j.tag !== CONFIG_TAG) continue;
       const f: StoredFit = {
         params: j.params,
@@ -414,9 +443,21 @@ export function fitAndPersist(
           "ON CONFLICT(bot_id) DO UPDATE SET fitted_us = excluded.fitted_us, data_us = excluded.data_us, " +
           "n_obs = excluded.n_obs, params = excluded.params",
       );
-      st.run(0, nowUs, r.refUs, r.obs, JSON.stringify({ tag: CONFIG_TAG, params: r.market, meanRack: [] }));
+      st.run(
+        0,
+        nowUs,
+        r.refUs,
+        r.obs,
+        JSON.stringify({ tag: CONFIG_TAG, params: r.market, meanRack: [] }),
+      );
       for (const [id, f] of r.bots) {
-        st.run(id, nowUs, f.dataUs, f.nObs, JSON.stringify({ tag: CONFIG_TAG, params: f.params, meanRack: f.meanRack }));
+        st.run(
+          id,
+          nowUs,
+          f.dataUs,
+          f.nObs,
+          JSON.stringify({ tag: CONFIG_TAG, params: f.params, meanRack: f.meanRack }),
+        );
       }
     });
     return { bots: r.bots.size, obs: r.obs };

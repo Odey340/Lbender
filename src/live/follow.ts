@@ -20,7 +20,11 @@ export async function pickMatchToFollow(
   let round = 0;
   if (matchId === undefined && want.botId === undefined) {
     const since = new Date(Date.now() - 3 * 60_000).toISOString();
-    const recent = await sql(host, db, `SELECT id, status, current_round FROM match_state WHERE created_at > '${since}'`);
+    const recent = await sql(
+      host,
+      db,
+      `SELECT id, status, current_round FROM match_state WHERE created_at > '${since}'`,
+    );
     const running = recent
       .filter((m) => m.status === "running")
       .sort((a, b) => Number(a.current_round) - Number(b.current_round));
@@ -39,11 +43,17 @@ export async function pickMatchToFollow(
     return { matchId: 0n, botId: want.botId, name: b?.name ?? "?", round: 0 };
   }
 
-  const seats = await sql(host, db, `SELECT bot_id FROM match_participant WHERE match_id = ${matchId}`);
+  const seats = await sql(
+    host,
+    db,
+    `SELECT bot_id FROM match_participant WHERE match_id = ${matchId}`,
+  );
   const ids = seats.map((s) => String(s.bot_id));
   if (!ids.length) return null;
   const chosen =
-    want.botId !== undefined ? String(want.botId) : (ids.find((id) => !bots.get(id)?.sim) ?? ids[0]!);
+    want.botId !== undefined
+      ? String(want.botId)
+      : (ids.find((id) => !bots.get(id)?.sim) ?? ids[0]!);
   if (round === 0) {
     const m = await sql(host, db, `SELECT current_round FROM match_state WHERE id = ${matchId}`);
     round = Number(m[0]?.current_round ?? 0);

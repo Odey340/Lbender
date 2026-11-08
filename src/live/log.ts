@@ -51,9 +51,13 @@ export class DecisionLog {
         this.stream?.end();
         this.day = day;
         this.stream = fs.createWriteStream(this.fileFor(day), { flags: "a" });
-        this.stream.on("error", (e) => console.error(`[${this.tag}] log write failed: ${e.message}`));
+        this.stream.on("error", (e) =>
+          console.error(`[${this.tag}] log write failed: ${e.message}`),
+        );
       }
-      this.stream.write(JSON.stringify({ t: new Date(now).toISOString(), type, ...rec }, jsonSafe) + "\n");
+      this.stream.write(
+        JSON.stringify({ t: new Date(now).toISOString(), type, ...rec }, jsonSafe) + "\n",
+      );
     } catch (e) {
       console.error(`[${this.tag}] log failed: ${e instanceof Error ? e.message : e}`);
     }

@@ -86,7 +86,9 @@ function checkDictionary(log: DecisionLog): void {
   }
   if (words < 150_000 || !probe) {
     const bar = "!".repeat(72);
-    console.error(`${bar}\n!! DICTIONARY BROKEN: ${words} words loaded, best word from RETAINS: ${probe ?? "none"}.\n!! The bot would bid 0 and score 0. Check data/wordlist.txt (git pull the latest Damo).\n${bar}`);
+    console.error(
+      `${bar}\n!! DICTIONARY BROKEN: ${words} words loaded, best word from RETAINS: ${probe ?? "none"}.\n!! The bot would bid 0 and score 0. Check data/wordlist.txt (git pull the latest Damo).\n${bar}`,
+    );
     process.exit(70);
   }
   log.human(`dictionary ok: ${words} words (RETAINS -> ${probe})`);
@@ -109,7 +111,12 @@ function warmUp(agent: Agent, log: DecisionLog) {
     nowMs: Date.now(),
   };
   for (const ch of "RETAI") view.myRack[ch.charCodeAt(0) - 65]! += 1;
-  const auction = { auctionId: 0, letter: "S", opensAtMs: Date.now(), closesAtMs: Date.now() + 1000 };
+  const auction = {
+    auctionId: 0,
+    letter: "S",
+    opensAtMs: Date.now(),
+    closesAtMs: Date.now() + 1000,
+  };
   const t0 = performance.now();
   try {
     agent.quickBid(view, auction);
@@ -128,7 +135,11 @@ async function main() {
   const botName = process.env.BOT_NAME ?? "damo";
   const tokenPath = path.join(ROOT, `.token-${botName}`);
   const logDir = process.env.PALACE_LOG_DIR ?? path.join(ROOT, "logs");
-  const log = new DecisionLog(logDir, args.dryRun ? "dryrun" : "decisions", args.dryRun ? "dry" : "Damo");
+  const log = new DecisionLog(
+    logDir,
+    args.dryRun ? "dryrun" : "decisions",
+    args.dryRun ? "dry" : "Damo",
+  );
   setGlobalLogLevel("warn");
 
   // A thrown error anywhere must not kill a bot that's mid-match.
@@ -145,16 +156,22 @@ async function main() {
   if (!args.dryRun) {
     token = process.env.BOT_TOKEN?.trim() || readToken(tokenPath);
     if (!token && !process.env.BOT_NONCE) {
-      log.warn(`no token: set BOT_TOKEN or BOT_NONCE (token file ${path.basename(tokenPath)} not found)`);
+      log.warn(
+        `no token: set BOT_TOKEN or BOT_NONCE (token file ${path.basename(tokenPath)} not found)`,
+      );
       process.exit(78);
     }
   }
 
   const loaded = await loadAgent(args.agent, "live");
-  const label = loaded.fallback ? `${loaded.agent.name} (fallback from ${args.agent})` : loaded.agent.name;
+  const label = loaded.fallback
+    ? `${loaded.agent.name} (fallback from ${args.agent})`
+    : loaded.agent.name;
   if (loaded.fallback) {
     const bar = "!".repeat(72);
-    console.warn(`${bar}\n!! Agent '${args.agent}' unavailable: ${loaded.notes.join("; ")}\n!! FALLING BACK TO THE STARTER AGENT\n${bar}`);
+    console.warn(
+      `${bar}\n!! Agent '${args.agent}' unavailable: ${loaded.notes.join("; ")}\n!! FALLING BACK TO THE STARTER AGENT\n${bar}`,
+    );
   } else if (loaded.notes.length) log.human(`agent ${label}: ${loaded.notes.join("; ")}`);
   checkDictionary(log);
   warmUp(loaded.agent, log);
@@ -163,21 +180,31 @@ async function main() {
   if (args.dryRun) {
     const pick = await pickMatchToFollow(host, db, { matchId: args.match, botId: args.as });
     if (!pick) {
-      log.warn("dry run: no running match found to follow; try again in a minute or pass --match/--as");
+      log.warn(
+        "dry run: no running match found to follow; try again in a minute or pass --match/--as",
+      );
       process.exit(2);
     }
     asBotId = pick.botId;
-    log.human(`dry run: following match ${pick.matchId} (round ${pick.round}) as bot ${pick.botId} '${pick.name}'`);
+    log.human(
+      `dry run: following match ${pick.matchId} (round ${pick.round}) as bot ${pick.botId} '${pick.name}'`,
+    );
   }
 
   let tournamentId: bigint | undefined;
   try {
-    tournamentId = process.env.TOURNAMENT_ID?.trim() ? BigInt(process.env.TOURNAMENT_ID.trim()) : undefined;
+    tournamentId = process.env.TOURNAMENT_ID?.trim()
+      ? BigInt(process.env.TOURNAMENT_ID.trim())
+      : undefined;
   } catch {
-    log.warn(`TOURNAMENT_ID '${process.env.TOURNAMENT_ID}' is not a number: ignored (auto-registration still on unless DAMO_AUTO_TOURNAMENT=0)`);
+    log.warn(
+      `TOURNAMENT_ID '${process.env.TOURNAMENT_ID}' is not a number: ignored (auto-registration still on unless DAMO_AUTO_TOURNAMENT=0)`,
+    );
   }
   const autoTournament = process.env.DAMO_AUTO_TOURNAMENT !== "0";
-  const margin = args.margin ?? (process.env.PALACE_MARGIN_MS ? Number(process.env.PALACE_MARGIN_MS) : undefined);
+  const margin =
+    args.margin ??
+    (process.env.PALACE_MARGIN_MS ? Number(process.env.PALACE_MARGIN_MS) : undefined);
   const session = new Session({
     host,
     db,
@@ -186,7 +213,10 @@ async function main() {
     saveToken: (t) => saveToken(tokenPath, t, log),
     tournamentId,
     autoTournament,
-    stallMs: process.env.DAMO_STALL_MS !== undefined && Number.isFinite(Number(process.env.DAMO_STALL_MS)) ? Number(process.env.DAMO_STALL_MS) : undefined,
+    stallMs:
+      process.env.DAMO_STALL_MS !== undefined && Number.isFinite(Number(process.env.DAMO_STALL_MS))
+        ? Number(process.env.DAMO_STALL_MS)
+        : undefined,
     dryRun: args.dryRun,
     asBotId,
     maxMatches: args.matches ?? (args.dryRun ? 1 : 0),
@@ -223,7 +253,9 @@ async function main() {
     if (shuttingDown) process.exit(0);
     shuttingDown = true;
     setTimeout(() => process.exit(0), 5000).unref();
-    log.human(`${sig}: shutting down${session.current !== null ? ` (match ${session.current} still running)` : ""}`);
+    log.human(
+      `${sig}: shutting down${session.current !== null ? ` (match ${session.current} still running)` : ""}`,
+    );
     void session.stop(0);
   };
   process.on("SIGINT", () => shutdown("SIGINT"));

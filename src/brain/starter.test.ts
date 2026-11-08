@@ -26,7 +26,14 @@ function view(rack: number[]): MatchView {
 test("StarterAgent.chooseWords equals the original longest-first scan", () => {
   const fast = new StarterAgent();
   const rand = mulberry32(2024);
-  const racks = [emptyCounts(), countsOf("Q"), countsOf("QI"), countsOf("ZZZ"), countsOf("RETAINS"), countsOf("AEIOU")];
+  const racks = [
+    emptyCounts(),
+    countsOf("Q"),
+    countsOf("QI"),
+    countsOf("ZZZ"),
+    countsOf("RETAINS"),
+    countsOf("AEIOU"),
+  ];
   for (let i = 0; i < 160; i++) racks.push(randomRack(rand, i % 17));
   for (const r of racks) assert.deepEqual(fast.chooseWords(view(r)), legacyChooseWords(view(r)));
 });

@@ -107,7 +107,14 @@ export function aggregate(records: readonly GameRecord[]): SpecStats[] {
     for (const s of r.seats) {
       let acc = bySpec.get(s.spec);
       if (!acc) {
-        acc = { perDeal: new Map(), games: 0, wordsPlayed: 0, bidRejections: 0, wordRejections: 0, agentErrors: 0 };
+        acc = {
+          perDeal: new Map(),
+          games: 0,
+          wordsPlayed: 0,
+          bidRejections: 0,
+          wordRejections: 0,
+          agentErrors: 0,
+        };
         bySpec.set(s.spec, acc);
       }
       let d = acc.perDeal.get(r.deal);

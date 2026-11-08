@@ -79,12 +79,22 @@ export function runMatch(
     balance: STARTING_BALANCE,
     score: 0,
     rack: emptyCounts(),
-    res: { botId: s.botId, score: 0, place: 0, tilesWon: 0, paid: [], topBids: [], words: [], tilesLeft: 0 } as SeatResult,
+    res: {
+      botId: s.botId,
+      score: 0,
+      place: 0,
+      tilesWon: 0,
+      paid: [],
+      topBids: [],
+      words: [],
+      tilesLeft: 0,
+    } as SeatResult,
   }));
-  for (const s of st) for (let n = 0; n < STARTING_RACK_SIZE; n++) {
-    const l = draw();
-    if (l) s.rack[l.charCodeAt(0) - 65]!++;
-  }
+  for (const s of st)
+    for (let n = 0; n < STARTING_RACK_SIZE; n++) {
+      const l = draw();
+      if (l) s.rack[l.charCodeAt(0) - 65]!++;
+    }
   const history: PublicEvent[] = [];
   const play = (s: (typeof st)[number], w: string) => {
     if (!isWord(w) || !canSpell(w, s.rack)) return;
@@ -102,7 +112,12 @@ export function runMatch(
     round,
     bagTotal,
     startingRackSize: STARTING_RACK_SIZE,
-    participants: st.map((o) => ({ botId: o.spec.botId, balance: o.balance, score: o.score, isSim: "simStrategy" in o.spec })),
+    participants: st.map((o) => ({
+      botId: o.spec.botId,
+      balance: o.balance,
+      score: o.score,
+      isSim: "simStrategy" in o.spec,
+    })),
     myRack: [...s.rack],
     history,
     nowMs: now,
@@ -110,7 +125,7 @@ export function runMatch(
 
   let round = 0;
   let auctionId = 0;
-  for (let letter = draw(); letter !== undefined; ) {
+  for (let letter = draw(); letter !== undefined;) {
     round++;
     auctionId++;
     const now = round * AUCTION_DURATION_MS;
@@ -122,12 +137,14 @@ export function runMatch(
         const j = Math.floor(rng() * (2 * SIM_BID_JITTER + 1)) - SIM_BID_JITTER;
         amount = base === null ? 0 : simBid(base, j, s.balance);
       } else {
-        amount = Math.floor(s.spec.agent.quickBid(viewFor(s, round, now), {
-          auctionId,
-          letter: letter!,
-          opensAtMs: now,
-          closesAtMs: now + AUCTION_DURATION_MS,
-        }));
+        amount = Math.floor(
+          s.spec.agent.quickBid(viewFor(s, round, now), {
+            auctionId,
+            letter: letter!,
+            opensAtMs: now,
+            closesAtMs: now + AUCTION_DURATION_MS,
+          }),
+        );
         if (!(amount >= 0) || amount > s.balance) amount = 0; // the server refuses it
       }
       if (amount > 0) bids.push({ i, amount });
@@ -149,7 +166,13 @@ export function runMatch(
       winner.res.paid.push(paid);
       winner.res.topBids.push(bids[0]!.amount);
     }
-    history.push({ kind: "auction", auctionId, letter, winnerBotId: winner?.spec.botId ?? null, paid });
+    history.push({
+      kind: "auction",
+      auctionId,
+      letter,
+      winnerBotId: winner?.spec.botId ?? null,
+      paid,
+    });
     if (winner && "simStrategy" in winner.spec) {
       const w = simBestPlayable(winner.rack, simWords(dictionary));
       if (w) play(winner, w);

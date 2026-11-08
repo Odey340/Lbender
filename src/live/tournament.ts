@@ -31,11 +31,16 @@ export interface TMatchRow {
 }
 
 /** Tournaments taking registrations that `botId` is not entered in, oldest first. */
-export function toRegister(tournaments: Iterable<TourRow>, entries: Iterable<EntryRow>, botId: Id): Id[] {
+export function toRegister(
+  tournaments: Iterable<TourRow>,
+  entries: Iterable<EntryRow>,
+  botId: Id,
+): Id[] {
   const mine = new Set<Id>();
   for (const e of entries) if (e.botId === botId) mine.add(e.tournamentId);
   const out: Id[] = [];
-  for (const t of tournaments) if (t.status.tag === "Registration" && !mine.has(t.id)) out.push(t.id);
+  for (const t of tournaments)
+    if (t.status.tag === "Registration" && !mine.has(t.id)) out.push(t.id);
   return out.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
@@ -55,7 +60,11 @@ export function isTournamentHold(err: string): boolean {
 const UNDER_WAY = new Set(["Swiss", "Bracket", "Final"]);
 
 /** A tournament `botId` is still in contention in has started: stay out of the lobby. */
-export function heldBy(tournaments: Iterable<TourRow>, entries: Iterable<EntryRow>, botId: Id): Id | null {
+export function heldBy(
+  tournaments: Iterable<TourRow>,
+  entries: Iterable<EntryRow>,
+  botId: Id,
+): Id | null {
   const status = new Map<Id, string>();
   for (const t of tournaments) status.set(t.id, t.status.tag);
   for (const e of entries) {
@@ -66,10 +75,15 @@ export function heldBy(tournaments: Iterable<TourRow>, entries: Iterable<EntryRo
 }
 
 /** Final-game match ids of the tournaments `botId` is entered in (whose seats the context needs). */
-export function finalMatchIds(matches: Iterable<TMatchRow>, entries: Iterable<EntryRow>, botId: Id): Id[] {
+export function finalMatchIds(
+  matches: Iterable<TMatchRow>,
+  entries: Iterable<EntryRow>,
+  botId: Id,
+): Id[] {
   const mine = new Set<Id>();
   for (const e of entries) if (e.botId === botId) mine.add(e.tournamentId);
   const out: Id[] = [];
-  for (const m of matches) if (m.phase.tag === "Final" && mine.has(m.tournamentId)) out.push(m.matchId);
+  for (const m of matches)
+    if (m.phase.tag === "Final" && mine.has(m.tournamentId)) out.push(m.matchId);
   return out.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }

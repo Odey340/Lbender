@@ -41,9 +41,27 @@ import type {
 } from "../backend_bindings/types.js";
 
 export type {
-  BidModel, DAuctionCtx, DBidObs, DMatchInfo, DMatchSeat, DPlayObs, GAuction, GBot, GBotStats,
-  GBotVersion, GMatch, GMatchMined, GParticipant, GRating, GRetiredBotStats, GTopBid, GTournament,
-  GTournamentEntry, GTournamentMatch, GWord, K13Match,
+  BidModel,
+  DAuctionCtx,
+  DBidObs,
+  DMatchInfo,
+  DMatchSeat,
+  DPlayObs,
+  GAuction,
+  GBot,
+  GBotStats,
+  GBotVersion,
+  GMatch,
+  GMatchMined,
+  GParticipant,
+  GRating,
+  GRetiredBotStats,
+  GTopBid,
+  GTournament,
+  GTournamentEntry,
+  GTournamentMatch,
+  GWord,
+  K13Match,
 };
 export { DbConnection, Timestamp, type SubscriptionHandle };
 
@@ -54,20 +72,54 @@ export const WRITER_TOKEN_PATH =
 
 /** SQL names of every public table, for `subscribeTables`. */
 export const TABLES = [
-  "g_bot", "g_bot_stats", "g_retired_bot_stats", "g_bot_version", "g_match", "g_participant",
-  "g_auction", "g_top_bid", "g_word", "g_rating", "g_tournament", "g_tournament_entry",
-  "g_tournament_match", "g_match_mined",
-  "d_match_info", "d_match_seat", "d_auction_ctx", "d_bid_obs", "d_play_obs",
-  "market_stat", "opp_stat", "seat_stat", "bid_model",
-  "k13_event", "k13_decision", "k13_word", "k13_match", "k13_status", "meta",
+  "g_bot",
+  "g_bot_stats",
+  "g_retired_bot_stats",
+  "g_bot_version",
+  "g_match",
+  "g_participant",
+  "g_auction",
+  "g_top_bid",
+  "g_word",
+  "g_rating",
+  "g_tournament",
+  "g_tournament_entry",
+  "g_tournament_match",
+  "g_match_mined",
+  "d_match_info",
+  "d_match_seat",
+  "d_auction_ctx",
+  "d_bid_obs",
+  "d_play_obs",
+  "market_stat",
+  "opp_stat",
+  "seat_stat",
+  "bid_model",
+  "k13_event",
+  "k13_decision",
+  "k13_word",
+  "k13_match",
+  "k13_status",
+  "meta",
 ] as const;
 export type TableName = (typeof TABLES)[number];
 
 /** Tables `mirrorDelete` accepts: tombstoned (history) or deleted (state). */
 export type MirrorTable =
-  | "g_bot" | "g_match" | "g_participant" | "g_auction" | "g_top_bid" | "g_word"
-  | "g_bot_stats" | "g_retired_bot_stats" | "g_bot_version" | "g_rating" | "g_tournament"
-  | "g_tournament_entry" | "g_tournament_match" | "g_match_mined";
+  | "g_bot"
+  | "g_match"
+  | "g_participant"
+  | "g_auction"
+  | "g_top_bid"
+  | "g_word"
+  | "g_bot_stats"
+  | "g_retired_bot_stats"
+  | "g_bot_version"
+  | "g_rating"
+  | "g_tournament"
+  | "g_tournament_entry"
+  | "g_tournament_match"
+  | "g_match_mined";
 
 /**
  * Rows per reducer call. Measured on the deployment host (backend/README.md): ingest
@@ -268,7 +320,12 @@ function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
 }
 
 /** Splits `rows` into chunks of at most `size` rows and about `maxBytes`. */
-export function chunk<T>(rows: readonly T[], size: number, maxBytes: number, bytes: (r: T) => number): T[][] {
+export function chunk<T>(
+  rows: readonly T[],
+  size: number,
+  maxBytes: number,
+  bytes: (r: T) => number,
+): T[][] {
   const out: T[][] = [];
   let cur: T[] = [];
   let curBytes = 0;
@@ -299,7 +356,12 @@ export async function writeBatched<T>(
   o: BatchOptions = {},
   bytes: (r: T) => number = approxBytes as (r: T) => number,
 ): Promise<BatchResult> {
-  const chunks = chunk(rows, Math.max(1, o.batchSize ?? DEFAULT_BATCH), o.maxBytes ?? DEFAULT_MAX_BYTES, bytes);
+  const chunks = chunk(
+    rows,
+    Math.max(1, o.batchSize ?? DEFAULT_BATCH),
+    o.maxBytes ?? DEFAULT_MAX_BYTES,
+    bytes,
+  );
   const parallel = Math.max(1, o.parallel ?? DEFAULT_PARALLEL);
   const timeout = o.callTimeoutMs ?? 120_000;
   const t0 = performance.now();
@@ -336,7 +398,8 @@ function decodeValue(t: AlgType, v: unknown): unknown {
     return v;
   }
   if ("Sum" in t) {
-    const vars = (t.Sum as { variants: { name: { some?: string }; algebraic_type: AlgType }[] }).variants;
+    const vars = (t.Sum as { variants: { name: { some?: string }; algebraic_type: AlgType }[] })
+      .variants;
     const [tag, inner] = v as [number, unknown];
     if (vars.length === 2 && vars[0]!.name.some === "some" && vars[1]!.name.some === "none") {
       return tag === 0 ? decodeValue(vars[0]!.algebraic_type, inner) : null;
@@ -356,7 +419,8 @@ export async function sql(
   query: string,
   o: { uri?: string; db?: string; token?: string; timeoutMs?: number } = {},
 ): Promise<SqlRow[]> {
-  if (/visible_auction_top_bids/i.test(query)) throw new Error("refusing to read visible_auction_top_bids");
+  if (/visible_auction_top_bids/i.test(query))
+    throw new Error("refusing to read visible_auction_top_bids");
   const uri = (o.uri ?? DEFAULT_URI).replace(/\/$/, "");
   const res = await fetch(`${uri}/v1/database/${encodeURIComponent(o.db ?? DEFAULT_DB)}/sql`, {
     method: "POST",
@@ -391,7 +455,9 @@ export function connectBackend(opts: ConnectOptions = {}): Promise<Backend> {
   if (!opts.anonymous && !token) {
     // Without this, a missing token file silently yields an anonymous
     // identity whose every write is refused much later.
-    return Promise.reject(new Error(`no writer token (${WRITER_TOKEN_PATH}); pass anonymous: true to read only`));
+    return Promise.reject(
+      new Error(`no writer token (${WRITER_TOKEN_PATH}); pass anonymous: true to read only`),
+    );
   }
   const uri = opts.uri ?? DEFAULT_URI;
   const db = opts.db ?? DEFAULT_DB;
@@ -400,7 +466,10 @@ export function connectBackend(opts: ConnectOptions = {}): Promise<Backend> {
     const closed = new Promise<string>((r) => (resolveClosed = r));
     // Generous: right after a server (re)start a database with the full
     // history takes ~20 s to load before it accepts connections.
-    const timer = setTimeout(() => reject(new Error(`connect to ${uri} timed out`)), opts.connectTimeoutMs ?? 60_000);
+    const timer = setTimeout(
+      () => reject(new Error(`connect to ${uri} timed out`)),
+      opts.connectTimeoutMs ?? 60_000,
+    );
     DbConnection.builder()
       .withUri(uri)
       .withDatabaseName(db)
@@ -416,7 +485,9 @@ export function connectBackend(opts: ConnectOptions = {}): Promise<Backend> {
         reject(err);
         resolveClosed(`connect error: ${err.message}`);
       })
-      .onDisconnect((_ctx, err) => resolveClosed(err ? `disconnected: ${err.message}` : "disconnected"))
+      .onDisconnect((_ctx, err) =>
+        resolveClosed(err ? `disconnected: ${err.message}` : "disconnected"),
+      )
       .build();
   });
 }
@@ -435,14 +506,21 @@ function makeBackend(
     (rows: readonly T[], o?: BatchOptions) =>
       writeBatched(fn, rows, o);
 
-  const subscribe = (queries: readonly string[], timeoutMs = 300_000): Promise<SubscriptionHandle> => {
+  const subscribe = (
+    queries: readonly string[],
+    timeoutMs = 300_000,
+  ): Promise<SubscriptionHandle> => {
     for (const q of queries) {
       // Belt and braces: this client is never pointed at the game server,
       // but the data rules forbid this view from every identity.
-      if (/visible_auction_top_bids/i.test(q)) throw new Error("refusing to read visible_auction_top_bids");
+      if (/visible_auction_top_bids/i.test(q))
+        throw new Error("refusing to read visible_auction_top_bids");
     }
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`subscription timed out: ${queries[0]}`)), timeoutMs);
+      const timer = setTimeout(
+        () => reject(new Error(`subscription timed out: ${queries[0]}`)),
+        timeoutMs,
+      );
       const handle: SubscriptionHandle = conn
         .subscriptionBuilder()
         .onApplied(() => {
@@ -457,7 +535,10 @@ function makeBackend(
     });
   };
 
-  const putDerived = async (matches: readonly DerivedMatch[], o: BatchOptions = {}): Promise<BatchResult> => {
+  const putDerived = async (
+    matches: readonly DerivedMatch[],
+    o: BatchOptions = {},
+  ): Promise<BatchResult> => {
     // Whole matches per call (the reducer replaces a match atomically), as
     // many as fit the row budget; a single oversize match goes alone.
     const size = (m: DerivedMatch) =>
@@ -503,18 +584,32 @@ function makeBackend(
     upsertWords: batch((rows: GWord[]) => r.upsertWords({ rows })),
     upsertRatings: batch((rows: GRating[]) => r.upsertRatings({ rows })),
     upsertTournaments: batch((rows: GTournament[]) => r.upsertTournaments({ rows })),
-    upsertTournamentEntries: batch((rows: GTournamentEntry[]) => r.upsertTournamentEntries({ rows })),
-    upsertTournamentMatches: batch((rows: GTournamentMatch[]) => r.upsertTournamentMatches({ rows })),
+    upsertTournamentEntries: batch((rows: GTournamentEntry[]) =>
+      r.upsertTournamentEntries({ rows }),
+    ),
+    upsertTournamentMatches: batch((rows: GTournamentMatch[]) =>
+      r.upsertTournamentMatches({ rows }),
+    ),
     upsertMatchMined: batch((rows: GMatchMined[]) => r.upsertMatchMined({ rows })),
-    replaceRatings: (matchIds, rows) => r.replaceRatings({ matchIds: [...matchIds], rows: [...rows] }),
+    replaceRatings: (matchIds, rows) =>
+      r.replaceRatings({ matchIds: [...matchIds], rows: [...rows] }),
     mirrorDelete: (table, ids, at = Timestamp.now()) =>
-      writeBatched((c: bigint[]) => r.mirrorDeleteRows({ table, ids: c, at }), ids, {}, () => 9),
+      writeBatched(
+        (c: bigint[]) => r.mirrorDeleteRows({ table, ids: c, at }),
+        ids,
+        {},
+        () => 9,
+      ),
     putDerived,
-    putBidModels: (rows, o) => writeBatched((c: BidModel[]) => r.putBidModels({ rows: c }), rows, { batchSize: 500, ...o }),
+    putBidModels: (rows, o) =>
+      writeBatched((c: BidModel[]) => r.putBidModels({ rows: c }), rows, { batchSize: 500, ...o }),
     deleteBidModels: (botIds = []) => r.deleteBidModels({ botIds: [...botIds] }),
     logEvents: (rows, o) =>
       writeBatched(
-        (c: EventIn[]) => r.logEvents({ rows: c.map((e) => ({ ...e, matchId: e.matchId, auctionId: e.auctionId })) }),
+        (c: EventIn[]) =>
+          r.logEvents({
+            rows: c.map((e) => ({ ...e, matchId: e.matchId, auctionId: e.auctionId })),
+          }),
         rows,
         { batchSize: 1_000, ...o },
       ),
@@ -527,7 +622,11 @@ function makeBackend(
     deleteMeta: (key) => r.deleteMeta({ key }),
     getMeta: (key) => conn.db.meta.key.find(key)?.value,
     subscribe,
-    subscribeTables: (names, timeoutMs) => subscribe(names.map((n) => `SELECT * FROM ${n}`), timeoutMs),
+    subscribeTables: (names, timeoutMs) =>
+      subscribe(
+        names.map((n) => `SELECT * FROM ${n}`),
+        timeoutMs,
+      ),
     unsubscribe: (handle, timeoutMs = 30_000) =>
       new Promise<void>((resolve) => {
         const timer = setTimeout(resolve, timeoutMs);
@@ -575,7 +674,11 @@ function jsonSafe(_k: string, v: unknown): unknown {
 }
 
 const asId = (v: unknown): bigint | undefined =>
-  typeof v === "bigint" ? v : typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? BigInt(v) : undefined;
+  typeof v === "bigint"
+    ? v
+    : typeof v === "number" && Number.isSafeInteger(v) && v >= 0
+      ? BigInt(v)
+      : undefined;
 
 /**
  * Buffers live log records into k13_event in the background, so a backend
@@ -651,7 +754,8 @@ export function createEventSink(opts: EventSinkOptions = {}): EventSink {
     push(type, rec) {
       try {
         let json = JSON.stringify(rec, jsonSafe);
-        if (json.length > 60_000) json = JSON.stringify({ truncated: true, head: json.slice(0, 50_000) });
+        if (json.length > 60_000)
+          json = JSON.stringify({ truncated: true, head: json.slice(0, 50_000) });
         queue.push({
           at: Timestamp.now(),
           type: type.slice(0, 64),

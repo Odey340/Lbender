@@ -91,7 +91,12 @@ test("bids are whole numbers within the balance; words are spellable", () => {
     nowMs: 0,
   };
   for (const letter of "AEQZSXK") {
-    const auction: AuctionView = { auctionId: letter.charCodeAt(0), letter, opensAtMs: 0, closesAtMs: 1000 };
+    const auction: AuctionView = {
+      auctionId: letter.charCodeAt(0),
+      letter,
+      opensAtMs: 0,
+      closesAtMs: 1000,
+    };
     const q = agent.quickBid(view, auction);
     assert.ok(Number.isInteger(q) && q >= 0 && q <= 23, `quick ${q}`);
     const r = agent.refineBid(view, auction, 50);
@@ -103,7 +108,10 @@ test("bids are whole numbers within the balance; words are spellable", () => {
     assert.ok(canSpell(w, left) && engine.isWord(w), w);
     for (let i = 0; i < w.length; i++) left[w.charCodeAt(i) - 65]!--;
   }
-  assert.deepEqual(createAgent({ mode: "sim" }).chooseWords({ ...view, myRack: emptyCounts() }), []);
+  assert.deepEqual(
+    createAgent({ mode: "sim" }).chooseWords({ ...view, myRack: emptyCounts() }),
+    [],
+  );
   assert.ok(totalTiles(left) >= 0);
 });
 
@@ -126,7 +134,12 @@ test("live refine respects its time budget", () => {
     nowMs: 0,
   };
   for (const [i, budget] of [40, 120].entries()) {
-    const auction: AuctionView = { auctionId: 500 + i, letter: "E", opensAtMs: 0, closesAtMs: 1000 };
+    const auction: AuctionView = {
+      auctionId: 500 + i,
+      letter: "E",
+      opensAtMs: 0,
+      closesAtMs: 1000,
+    };
     agent.quickBid(view, auction);
     const t0 = performance.now();
     agent.refineBid!(view, auction, budget);
@@ -144,11 +157,11 @@ test("params: defaults, file and overrides merge; junk is dropped", () => {
 
 test("liveCompute only changes live mode; sim replays exactly as without it", () => {
   const play = (params: Record<string, unknown>) =>
-    runMatch({ seats: seats(() => createAgent({ mode: "sim", seed: 7, params })), seed: 7, strict: true }).seats.map((s) => [
-      s.score,
-      s.balance,
-      s.tilesLeft,
-    ]);
+    runMatch({
+      seats: seats(() => createAgent({ mode: "sim", seed: 7, params })),
+      seed: 7,
+      strict: true,
+    }).seats.map((s) => [s.score, s.balance, s.tilesLeft]);
   assert.deepEqual(play({ liveCompute: 16 }), play({}));
 });
 

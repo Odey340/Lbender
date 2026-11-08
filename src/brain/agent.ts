@@ -146,14 +146,16 @@ export class PalaceAgent implements Agent {
     const fp = view.auctionType === "FirstPrice";
     for (; st.calibSeen < view.history.length; st.calibSeen++) {
       const e = view.history[st.calibSeen]!;
-      if (e.kind === "auction") st.market.observe(e.auctionId, e.winnerBotId, e.paid, view.myBotId, fp);
+      if (e.kind === "auction")
+        st.market.observe(e.auctionId, e.winnerBotId, e.paid, view.myBotId, fp);
     }
     return st;
   }
 
   private ctx(view: MatchView, st: MatchState, current?: string): RoundCtx {
     let who = "";
-    for (const x of view.participants) who += `${x.botId}:${x.balance}:${x.score}:${x.isSim ? 1 : 0},`;
+    for (const x of view.participants)
+      who += `${x.botId}:${x.balance}:${x.score}:${x.isSim ? 1 : 0},`;
     const key = `${view.round}|${view.bagTotal}|${rackKey(view.myRack)}|${current ?? ""}|${who}`;
     if (st.round?.key === key) return st.round;
     const meP = view.participants.find((x) => x.botId === view.myBotId);
@@ -199,7 +201,12 @@ export class PalaceAgent implements Agent {
       seats: view.participants.length,
       tournament: view.tournament,
     };
-    if (st.k < 0) st.k = Math.min(this.p.kMax, c.future, (this.p.futureScale * c.me.balance) / Math.max(1, this.p.kInitPrice));
+    if (st.k < 0)
+      st.k = Math.min(
+        this.p.kMax,
+        c.future,
+        (this.p.futureScale * c.me.balance) / Math.max(1, this.p.kInitPrice),
+      );
     st.round = c;
     return c;
   }
@@ -223,7 +230,10 @@ export class PalaceAgent implements Agent {
     for (let i = 0; i < 26; i++) {
       const m = markets[i];
       if (!m || pool[i]! <= 0) continue;
-      const b = Math.min(m.win.length - 1, Math.max(0, Math.floor((Math.max(0, values[i]!) * this.p.futureValueScale) / lambda)));
+      const b = Math.min(
+        m.win.length - 1,
+        Math.max(0, Math.floor((Math.max(0, values[i]!) * this.p.futureValueScale) / lambda)),
+      );
       win[i] = m.win[b]!;
       num += pool[i]! * win[i]!;
       den += pool[i]!;
@@ -235,13 +245,20 @@ export class PalaceAgent implements Agent {
     return w;
   }
 
-  private ensureTable(view: MatchView, st: MatchState, c: RoundCtx, n: number, deadline = Infinity): LetterTable {
+  private ensureTable(
+    view: MatchView,
+    st: MatchState,
+    c: RoundCtx,
+    n: number,
+    deadline = Infinity,
+  ): LetterTable {
     const key = rackKey(view.myRack);
     if (!st.table || st.table.key !== key) st.table = new LetterTable(view.myRack, this.part);
     const t = st.table;
     t.prune(view.round, st.k, this.p.sampleMaxAge);
     const want = Math.min(n, this.maxSamples);
-    if (t.size < want) t.add(c.pool, st.k, want - t.size, st.rand, view.round, st.acquire, deadline);
+    if (t.size < want)
+      t.add(c.pool, st.k, want - t.size, st.rand, view.round, st.acquire, deadline);
     return t;
   }
 
@@ -281,14 +298,20 @@ export class PalaceAgent implements Agent {
             continue;
           }
           const { len, cdfs } = this.oppDists(st, c, String.fromCharCode(65 + i), phaseF);
-          c.markets.push(letterMarket(cdfs.length ? maxCdf(cdfs, len) : new Float64Array(len).fill(1), p.tieShare));
+          c.markets.push(
+            letterMarket(
+              cdfs.length ? maxCdf(cdfs, len) : new Float64Array(len).fill(1),
+              p.tieShare,
+            ),
+          );
         }
       }
       const income = p.incomeShare * t.baseValue() * (c.future / Math.max(1, c.totalAuctions));
       const budget = c.me.balance + income;
       const values = t.deltas(counts);
       const r = solveLambda({ values, counts, markets: c.markets, budget, p });
-      const scale = p.lambdaScaleBig > 0 && c.seats >= p.bigTableSeats ? p.lambdaScaleBig : p.lambdaScale;
+      const scale =
+        p.lambdaScaleBig > 0 && c.seats >= p.bigTableSeats ? p.lambdaScaleBig : p.lambdaScale;
       c.lambda = Math.min(p.lambdaMax, Math.max(p.lambdaMin, r.lambda * scale));
       st.acquire = this.acquireWeights(values, c.pool, c.markets, c.lambda);
       // Tiles the budget buys at the going price. Not the projected wins
@@ -304,7 +327,14 @@ export class PalaceAgent implements Agent {
     const remaining = c.future / Math.max(1, c.totalAuctions);
     c.place =
       p.stageAware > 0 && c.tournament
-        ? stageView({ tournament: c.tournament, myBotId: c.me.botId }, c.me, c.rivals, c.lambda, remaining, p)
+        ? stageView(
+            { tournament: c.tournament, myBotId: c.me.botId },
+            c.me,
+            c.rivals,
+            c.lambda,
+            remaining,
+            p,
+          )
         : placeView(c.me, c.rivals, c.lambda, remaining, p);
     st.lastLambda = c.lambda;
     st.lastPlace = c.place;
@@ -333,7 +363,17 @@ export class PalaceAgent implements Agent {
       // and coins are worthless, so outbidding a sim that could still play
       // it costs nothing.
       const bid = p.lastTileDeny && c.opps.some((o) => o.isSim) ? balance : 0;
-      this.trace(st, view, auction, { value: 0, se: 0, lambda: 0, bid, selfBid: 0, pWin: 0, price: 0, stage: "last", samples: 0 });
+      this.trace(st, view, auction, {
+        value: 0,
+        se: 0,
+        lambda: 0,
+        bid,
+        selfBid: 0,
+        pWin: 0,
+        price: 0,
+        stage: "last",
+        samples: 0,
+      });
       return bid;
     }
 
@@ -387,7 +427,13 @@ export class PalaceAgent implements Agent {
     auction: AuctionView,
     x: Omit<BidTrace, "round" | "letter" | "k" | "scale">,
   ): void {
-    const tr: BidTrace = { round: view.round, letter: auction.letter, k: st.k, scale: st.market.scale, ...x };
+    const tr: BidTrace = {
+      round: view.round,
+      letter: auction.letter,
+      k: st.k,
+      scale: st.market.scale,
+      ...x,
+    };
     this.lastTrace = tr;
   }
 
@@ -412,7 +458,10 @@ export class PalaceAgent implements Agent {
       () => {
         if (view.bagTotal <= 0) return 0;
         const me = view.participants.find((x) => x.botId === view.myBotId);
-        return Math.max(0, Math.min(Math.floor(me?.balance ?? 0), 2 * (letterValue(auction.letter) + 4)));
+        return Math.max(
+          0,
+          Math.min(Math.floor(me?.balance ?? 0), 2 * (letterValue(auction.letter) + 4)),
+        );
       },
     );
   }
@@ -427,7 +476,10 @@ export class PalaceAgent implements Agent {
   chooseWords(view: MatchView): string[] {
     return this.guard(
       () => this.words(view),
-      () => (view.bagTotal <= this.p.dumpAtBag ? this.engine.bestPartition(view.myRack, { timeBudgetMs: 40 }).words : []),
+      () =>
+        view.bagTotal <= this.p.dumpAtBag
+          ? this.engine.bestPartition(view.myRack, { timeBudgetMs: 40 }).words
+          : [],
     );
   }
 
@@ -465,13 +517,20 @@ export class PalaceAgent implements Agent {
     const p = this.p;
     if (view.bagTotal <= p.dumpAtBag) {
       // Last chance: the match ends at this auction's close.
-      return this.engine.bestPartition(rack, { timeBudgetMs: this.mode === "sim" ? 250 : 40 }).words;
+      return this.engine.bestPartition(rack, { timeBudgetMs: this.mode === "sim" ? 250 : 40 })
+        .words;
     }
     const key = `${view.round}|${view.bagTotal}|${rackKey(rack)}`;
     const hit = st.playCache.get(key);
     if (hit) return hit;
     const c = this.ctx(view, st);
-    const t = this.ensureTable(view, st, c, Math.max(p.playSamples, p.quickSamples), this.deadline(p.wordsBudgetMs));
+    const t = this.ensureTable(
+      view,
+      st,
+      c,
+      Math.max(p.playSamples, p.quickSamples),
+      this.deadline(p.wordsBudgetMs),
+    );
     this.lambdaSoon(st, c, t);
 
     const out: string[] = [];
@@ -495,7 +554,15 @@ export class PalaceAgent implements Agent {
       for (let i = 0; i < w.length; i++) left[w.charCodeAt(i) - 65]!--;
       if (totalTiles(left) < 2) break;
       table = new LetterTable(left, this.part);
-      table.add(c.pool, st.k, Math.max(4, Math.floor(p.playSamples / 2)), st.rand, view.round, st.acquire, this.deadline(p.wordsBudgetMs / 2));
+      table.add(
+        c.pool,
+        st.k,
+        Math.max(4, Math.floor(p.playSamples / 2)),
+        st.rand,
+        view.round,
+        st.acquire,
+        this.deadline(p.wordsBudgetMs / 2),
+      );
     }
     st.playCache.set(key, out);
     if (st.playCache.size > 64) st.playCache.clear();
@@ -542,7 +609,9 @@ export class PalaceAgent implements Agent {
     try {
       this.model.refresh({
         budgetMs: this.p.liveRefreshMs,
-        botIds: view.participants.filter((x) => !x.isSim && x.botId !== view.myBotId).map((x) => x.botId),
+        botIds: view.participants
+          .filter((x) => !x.isSim && x.botId !== view.myBotId)
+          .map((x) => x.botId),
       });
     } catch {
       // A failed refit keeps the old fits; never let it reach the bot.

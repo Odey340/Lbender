@@ -56,7 +56,8 @@ export interface SyncSqlOptions {
  * Throws on an HTTP error or a timeout.
  */
 export function sqlSync(query: string, o: SyncSqlOptions = {}): SqlRow[] {
-  if (/visible_auction_top_bids/i.test(query)) throw new Error("refusing to read visible_auction_top_bids");
+  if (/visible_auction_top_bids/i.test(query))
+    throw new Error("refusing to read visible_auction_top_bids");
   ensureWorker();
   const timeoutMs = o.timeoutMs ?? 120_000;
   const uri = (o.uri ?? DEFAULT_URI).replace(/\/$/, "");
@@ -66,11 +67,17 @@ export function sqlSync(query: string, o: SyncSqlOptions = {}): SqlRow[] {
   const ch = new MessageChannel();
   ch.port1.unref();
   Atomics.store(flag, 0, 0);
-  worker!.postMessage({ url, body: query, token: o.token, timeoutMs, port: ch.port2, flag }, [ch.port2]);
+  worker!.postMessage({ url, body: query, token: o.token, timeoutMs, port: ch.port2, flag }, [
+    ch.port2,
+  ]);
   const r = Atomics.wait(flag, 0, 0, timeoutMs + 2_000);
-  const got = receiveMessageOnPort(ch.port1)?.message as { ok: boolean; status: number; text: string } | undefined;
+  const got = receiveMessageOnPort(ch.port1)?.message as
+    { ok: boolean; status: number; text: string } | undefined;
   ch.port1.close();
-  if (!got) throw new Error(r === "timed-out" ? `sql timed out after ${timeoutMs} ms` : "sql worker gave no answer");
+  if (!got)
+    throw new Error(
+      r === "timed-out" ? `sql timed out after ${timeoutMs} ms` : "sql worker gave no answer",
+    );
   if (!got.ok) throw new Error(`sql ${got.status || "failed"}: ${got.text.slice(0, 300)}`);
   return decodeSqlResponse(got.text);
 }

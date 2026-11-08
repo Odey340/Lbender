@@ -117,19 +117,21 @@ export function availableSims(plans: readonly SeatPlan[]): (typeof SIM_POOL)[num
  * resolveLobby's timeout padding: shuffle the sims not already seated and
  * take as many as the table is short of `maxSize`.
  */
-export function padWithSims(plans: SeatPlan[], rng: Shuffler, maxSize = LOBBY_MAX_SIZE): SeatPlan[] {
+export function padWithSims(
+  plans: SeatPlan[],
+  rng: Shuffler,
+  maxSize = LOBBY_MAX_SIZE,
+): SeatPlan[] {
   const available = availableSims(plans);
   rng.shuffle(available);
   const need = Math.max(maxSize - plans.length, 0);
   return [
     ...plans,
-    ...available.slice(0, need).map(
-      (s): SeatPlan => ({
-        spec: { spec: `sim:${s.strategy}`, kind: "sim", strategy: s.strategy },
-        botId: s.botId,
-        isSim: true,
-      }),
-    ),
+    ...available.slice(0, need).map((s): SeatPlan => ({
+      spec: { spec: `sim:${s.strategy}`, kind: "sim", strategy: s.strategy },
+      botId: s.botId,
+      isSim: true,
+    })),
   ];
 }
 
@@ -167,14 +169,22 @@ export async function importIfPresent(rel: string): Promise<Module | undefined> 
   return (await import(specifier)) as Module;
 }
 
-function need(mod: Module | undefined, file: string, fn: string, why: string): (...a: never[]) => unknown {
+function need(
+  mod: Module | undefined,
+  file: string,
+  fn: string,
+  why: string,
+): (...a: never[]) => unknown {
   if (!mod) throw new Error(`${why} needs ${file}, which doesn't exist yet`);
   const f = mod[fn];
   if (typeof f !== "function") throw new Error(`${why} needs ${file} to export ${fn}()`);
   return f as (...a: never[]) => unknown;
 }
 
-export async function loadRegistry(specs: readonly SeatSpec[], opts: AgentOptions = {}): Promise<Registry> {
+export async function loadRegistry(
+  specs: readonly SeatSpec[],
+  opts: AgentOptions = {},
+): Promise<Registry> {
   const warnings: string[] = [];
   const kinds = new Set(specs.map((s) => s.kind));
 
@@ -182,7 +192,9 @@ export async function loadRegistry(specs: readonly SeatSpec[], opts: AgentOption
   let model: unknown;
   if (kinds.has("palace")) {
     const brain = await importIfPresent("../brain/index.js");
-    createPalace = need(brain, "src/brain/index.ts", "createAgent", "seat 'palace'") as (o: object) => Agent;
+    createPalace = need(brain, "src/brain/index.ts", "createAgent", "seat 'palace'") as (
+      o: object,
+    ) => Agent;
     if (opts.model !== false) {
       try {
         const mod = await importIfPresent("../memory/model.js");
@@ -206,10 +218,12 @@ export async function loadRegistry(specs: readonly SeatSpec[], opts: AgentOption
   let createClone: ((botId: number, o: object) => Agent) | undefined;
   if (kinds.has("clone")) {
     const clones = await importIfPresent("../memory/clones.js");
-    createClone = need(clones, "src/memory/clones.ts", "createCloneAgent", "seat 'clone:<botId>'") as (
-      botId: number,
-      o: object,
-    ) => Agent;
+    createClone = need(
+      clones,
+      "src/memory/clones.ts",
+      "createCloneAgent",
+      "seat 'clone:<botId>'",
+    ) as (botId: number, o: object) => Agent;
   }
 
   return {

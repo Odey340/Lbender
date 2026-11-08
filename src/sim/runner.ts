@@ -170,7 +170,11 @@ export async function runMatches(opts: RunOptions): Promise<RunResult> {
   const { onProgress, ...wopts } = opts;
   const t0 = performance.now();
   const ctx = await prepare(wopts);
-  const total = totalGames(Math.max(0, Math.floor(opts.games)), ctx.seatsPerGame, opts.swap ?? false);
+  const total = totalGames(
+    Math.max(0, Math.floor(opts.games)),
+    ctx.seatsPerGame,
+    opts.swap ?? false,
+  );
   const workers = Math.max(1, Math.min(Math.floor(opts.workers ?? 1), total || 1));
   const records: GameRecord[] = [];
   const warnings = new Set(ctx.registry.warnings);
@@ -182,10 +186,17 @@ export async function runMatches(opts: RunOptions): Promise<RunResult> {
     }
   } else {
     const chunk = Math.max(1, opts.chunkSize ?? Math.min(16, Math.ceil(total / (workers * 4))));
-    await runInWorkers(wopts, total, workers, chunk, (recs) => {
-      records.push(...recs);
-      onProgress?.(records.length, total);
-    }, warnings);
+    await runInWorkers(
+      wopts,
+      total,
+      workers,
+      chunk,
+      (recs) => {
+        records.push(...recs);
+        onProgress?.(records.length, total);
+      },
+      warnings,
+    );
   }
 
   records.sort((a, b) => a.game - b.game);

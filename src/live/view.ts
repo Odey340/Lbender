@@ -91,7 +91,17 @@ export function orderHistory(
     });
   }
   keyed.sort((a, b) =>
-    a.at !== b.at ? (a.at < b.at ? -1 : 1) : a.kind !== b.kind ? a.kind - b.kind : a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+    a.at !== b.at
+      ? a.at < b.at
+        ? -1
+        : 1
+      : a.kind !== b.kind
+        ? a.kind - b.kind
+        : a.id < b.id
+          ? -1
+          : a.id > b.id
+            ? 1
+            : 0,
   );
   return keyed.map((k) => k.ev);
 }

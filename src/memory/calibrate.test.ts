@@ -3,7 +3,14 @@ import assert from "node:assert/strict";
 import { countsOf } from "../core/rules.js";
 import { getWordEngine } from "../core/words.js";
 import { lossOf } from "./calibrate.js";
-import { newAcc, addTo, rankEntrants, sampleField, summarize, type FieldFile } from "./calibrate-targets.js";
+import {
+  newAcc,
+  addTo,
+  rankEntrants,
+  sampleField,
+  summarize,
+  type FieldFile,
+} from "./calibrate-targets.js";
 import { S, STAT_KEYS } from "./calibrate-sim.js";
 import { DEFAULT_PARAMS, choosePlaysParam, cloneParamsFor, type ClonesFile } from "./clones.js";
 import { rng32 } from "./util.js";
@@ -17,7 +24,10 @@ test("summaries are ratios of sums and the loss is zero on a perfect match", () 
   v[S.words] = 2;
   v[S.letters] = 12;
   addTo(a, v);
-  addTo(a, v.map((x) => x * 0));
+  addTo(
+    a,
+    v.map((x) => x * 0),
+  );
   const s = summarize(a);
   assert.equal(s.score, 40);
   assert.equal(s.price, 13);
@@ -78,11 +88,28 @@ test("entrants rank by share of real opponents outscored; sims, stale and small 
       { matchId: m, botId: 99, isSim: true, score: 10, place: 4, ended: 10 * H },
     );
   }
-  rows.push({ matchId: 100, botId: 4, isSim: false, score: 200, place: 1, ended: 10 * H }, { matchId: 100, botId: 3, isSim: false, score: 1, place: 2, ended: 10 * H });
-  const r = rankEntrants(rows, 10 * H, { halfLifeHours: 12, activeHours: 6, minSeats: 30, top: 16, exclude: new Set([2]) });
-  assert.deepEqual(r.map((e) => e.id), [1, 3]);
+  rows.push(
+    { matchId: 100, botId: 4, isSim: false, score: 200, place: 1, ended: 10 * H },
+    { matchId: 100, botId: 3, isSim: false, score: 1, place: 2, ended: 10 * H },
+  );
+  const r = rankEntrants(rows, 10 * H, {
+    halfLifeHours: 12,
+    activeHours: 6,
+    minSeats: 30,
+    top: 16,
+    exclude: new Set([2]),
+  });
+  assert.deepEqual(
+    r.map((e) => e.id),
+    [1, 3],
+  );
   assert.equal(r[0]!.beatShare, 1);
   assert.ok(Math.abs(r[1]!.beatShare - 0) < 0.03);
-  const stale = rankEntrants(rows, 20 * H, { halfLifeHours: 12, activeHours: 6, minSeats: 30, top: 16 });
+  const stale = rankEntrants(rows, 20 * H, {
+    halfLifeHours: 12,
+    activeHours: 6,
+    minSeats: 30,
+    top: 16,
+  });
   assert.equal(stale.length, 0);
 });

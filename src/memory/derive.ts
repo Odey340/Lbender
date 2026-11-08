@@ -72,13 +72,19 @@ interface Seat {
 }
 
 /** Version a bot was on when a match was created (game.ts versionAt). */
-export function versionAt(versions: { version: number; startedUs: number }[] | undefined, createdUs: number): number {
+export function versionAt(
+  versions: { version: number; startedUs: number }[] | undefined,
+  createdUs: number,
+): number {
   let v = 1;
   for (const r of versions ?? []) if (r.startedUs <= createdUs) v = Math.max(v, r.version);
   return v;
 }
 
-export function deriveAll(db: Db, opts: { rebuild?: boolean; matchIds?: number[] } = {}): DeriveStats {
+export function deriveAll(
+  db: Db,
+  opts: { rebuild?: boolean; matchIds?: number[] } = {},
+): DeriveStats {
   const stats: DeriveStats = {
     matches: 0,
     bidObs: 0,
@@ -108,17 +114,24 @@ export function deriveAll(db: Db, opts: { rebuild?: boolean; matchIds?: number[]
          LEFT JOIN match_info mi ON mi.match_id = m.id
          WHERE mm.complete = 1 AND m.status = 'Ended'
            AND (mi.match_id IS NULL OR mi.derived_us < mm.mined_us) ORDER BY m.id`;
-    ids = db.prepare(sql).all().map((r) => num(r.id));
+    ids = db
+      .prepare(sql)
+      .all()
+      .map((r) => num(r.id));
   }
   if (ids.length === 0) return stats;
 
   const q = {
     match: db.prepare("SELECT * FROM match_state WHERE id = ?"),
-    seats: db.prepare("SELECT bot_id, balance, score FROM match_participant WHERE match_id = ? ORDER BY id"),
+    seats: db.prepare(
+      "SELECT bot_id, balance, score FROM match_participant WHERE match_id = ? ORDER BY id",
+    ),
     results: db.prepare(
       "SELECT auction_id, letter, winner_bot_id, paid, closed_us FROM auction_result WHERE match_id = ? ORDER BY auction_id",
     ),
-    archive: db.prepare("SELECT auction_id, top_bid FROM auction_top_bid_archive WHERE match_id = ?"),
+    archive: db.prepare(
+      "SELECT auction_id, top_bid FROM auction_top_bid_archive WHERE match_id = ?",
+    ),
     words: db.prepare(
       "SELECT id, bot_id, word, total_reward, played_us FROM word_play WHERE match_id = ? ORDER BY played_us, id",
     ),
@@ -224,8 +237,18 @@ function deriveMatch(
       const word = String(wr.word);
       const reward = num(wr.total_reward);
       w.play.run(
-        num(wr.id), matchId, s.botId, s.isSim ? 1 : 0, word, word.length, reward, roundIdx,
-        n > 0 ? Math.min(roundIdx / n, 1) : 0, s.rack, s.balance, endedUs,
+        num(wr.id),
+        matchId,
+        s.botId,
+        s.isSim ? 1 : 0,
+        word,
+        word.length,
+        reward,
+        roundIdx,
+        n > 0 ? Math.min(roundIdx / n, 1) : 0,
+        s.rack,
+        s.balance,
+        endedUs,
       );
       stats.playObs++;
       s.balance += reward;
@@ -282,15 +305,29 @@ function deriveMatch(
       if (atMost > 0) simQ *= below / atMost;
     }
     w.ctx.run(
-      auctionId, matchId, k, n, phase, letter, winner, ws ? (ws.isSim ? 1 : 0) : null, paid,
-      topBid ?? null, closedUs, endedUs, simQ,
+      auctionId,
+      matchId,
+      k,
+      n,
+      phase,
+      letter,
+      winner,
+      ws ? (ws.isSim ? 1 : 0) : null,
+      paid,
+      topBid ?? null,
+      closedUs,
+      endedUs,
+      simQ,
     );
     if (ws?.isSim && topBid !== undefined) {
       const [lo, hi] = simRange(ws);
       if (topBid < lo || topBid > hi) stats.simFormulaViolations++;
     }
     const realLosers = seats.filter((s) => !s.isSim && s.botId !== winner);
-    const simLoserMax = Math.max(0, ...seats.filter((s) => s.isSim && s.botId !== winner).map((s) => simRange(s)[1]));
+    const simLoserMax = Math.max(
+      0,
+      ...seats.filter((s) => s.isSim && s.botId !== winner).map((s) => simRange(s)[1]),
+    );
 
     for (const s of seats) {
       if (s.isSim) continue;
@@ -325,8 +362,21 @@ function deriveMatch(
       // The cap can't be below a bid the server accepted.
       const cap = Math.max(s.balance, kind === KIND_EQ ? value : 0);
       w.bid.run(
-        auctionId, s.botId, matchId, letter, k, phase, bal, cap, rackOpen.get(s.botId)!, kind, value,
-        s.botId === winner ? 1 : 0, othersMax, s.version, endedUs,
+        auctionId,
+        s.botId,
+        matchId,
+        letter,
+        k,
+        phase,
+        bal,
+        cap,
+        rackOpen.get(s.botId)!,
+        kind,
+        value,
+        s.botId === winner ? 1 : 0,
+        othersMax,
+        s.version,
+        endedUs,
       );
       stats.bidObs++;
     }
@@ -350,14 +400,37 @@ function deriveMatch(
   }
   if (!ok) stats.balanceMismatches++;
   const nReal = seats.filter((s) => !s.isSim).length;
-  w.info.run(matchId, seats.length, nReal, n, expected, String(m.auction_type), createdUs, endedUs, ok, nowUs);
+  w.info.run(
+    matchId,
+    seats.length,
+    nReal,
+    n,
+    expected,
+    String(m.auction_type),
+    createdUs,
+    endedUs,
+    ok,
+    nowUs,
+  );
   for (const s of seats) {
     const score = finalScore.get(s.botId) ?? s.score;
     let better = 0;
     for (const v of finalScore.values()) if (v > score) better++;
     w.seat.run(
-      matchId, s.botId, s.isSim ? 1 : 0, s.strategy, s.version, score, s.balance, better + 1, s.wonTiles,
-      s.paidTotal, s.words, s.lettersPlayed, s.rack, endedUs,
+      matchId,
+      s.botId,
+      s.isSim ? 1 : 0,
+      s.strategy,
+      s.version,
+      score,
+      s.balance,
+      better + 1,
+      s.wonTiles,
+      s.paidTotal,
+      s.words,
+      s.lettersPlayed,
+      s.rack,
+      endedUs,
     );
   }
   stats.matches++;

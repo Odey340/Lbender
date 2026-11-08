@@ -14,6 +14,11 @@ export function stallLimitMs(auctionMs: number, overrideMs?: number): number {
 }
 
 /** True when the feed of a running match has been silent past the limit. */
-export function feedStalled(nowMs: number, lastFeedMs: number, auctionMs: number, overrideMs?: number): boolean {
+export function feedStalled(
+  nowMs: number,
+  lastFeedMs: number,
+  auctionMs: number,
+  overrideMs?: number,
+): boolean {
   return nowMs - lastFeedMs > stallLimitMs(auctionMs, overrideMs);
 }

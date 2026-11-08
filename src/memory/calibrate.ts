@@ -28,7 +28,13 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { openDb } from "./db.js";
 import { HISTORY_DB } from "./calibrate-legacy.js";
-import { SimPool, paramsFromVec, paramsToVec, type MatchJob, type SeatJob } from "./calibrate-sim.js";
+import {
+  SimPool,
+  paramsFromVec,
+  paramsToVec,
+  type MatchJob,
+  type SeatJob,
+} from "./calibrate-sim.js";
 import {
   SUMMARY_KEYS,
   accumulate,
@@ -71,7 +77,8 @@ export const LOSS_SCALE: Partial<Record<SummaryKey, number>> = {
 
 export function lossOf(real: Record<SummaryKey, number>, sim: Record<SummaryKey, number>): number {
   let l = 0;
-  for (const [k, s] of Object.entries(LOSS_SCALE) as [SummaryKey, number][]) l += ((sim[k] - real[k]) / s) ** 2;
+  for (const [k, s] of Object.entries(LOSS_SCALE) as [SummaryKey, number][])
+    l += ((sim[k] - real[k]) / s) ** 2;
   return l;
 }
 
@@ -101,13 +108,24 @@ function sarg(name: string, def: string): string {
 const log = (s: string) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${s}`);
 
 /** Jobs replaying tables with every real seat a clone (params per key), sims as sims. */
-function replayJobs(tables: readonly RealTable[], vecFor: (botId: number) => number[] | "legacy", seed: number): MatchJob[] {
+function replayJobs(
+  tables: readonly RealTable[],
+  vecFor: (botId: number) => number[] | "legacy",
+  seed: number,
+): MatchJob[] {
   return tables.map((t, ti) => ({
     seed: (seed * 1_000_003 + ti * 7919 + t.matchId) >>> 0,
     seats: t.seats.map((s): SeatJob => {
-      if (s.isSim) return { kind: "sim", botId: s.botId, strategy: (s.strategy ?? "ValueBidder") as "ValueBidder" };
+      if (s.isSim)
+        return {
+          kind: "sim",
+          botId: s.botId,
+          strategy: (s.strategy ?? "ValueBidder") as "ValueBidder",
+        };
       const v = vecFor(s.botId);
-      return v === "legacy" ? { kind: "legacy", botId: s.botId } : { kind: "clone", botId: s.botId, params: v };
+      return v === "legacy"
+        ? { kind: "legacy", botId: s.botId }
+        : { kind: "clone", botId: s.botId, params: v };
     }),
   }));
 }
@@ -156,7 +174,8 @@ async function evalSet(
 }
 
 const round = (x: number, d = 2) => Number(x.toFixed(d));
-const roundRec = (r: Record<string, number>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, round(v, 3)]));
+const roundRec = (r: Record<string, number>) =>
+  Object.fromEntries(Object.entries(r).map(([k, v]) => [k, round(v, 3)]));
 
 async function fit(): Promise<void> {
   const limit = arg("limit", 3000);
@@ -174,7 +193,10 @@ async function fit(): Promise<void> {
 
   const realFitBot = accumulate(fitSet);
   const realHoldBot = accumulate(holdSet);
-  const fittedIds = [...realFitBot.entries()].filter(([, a]) => a.n >= minSeats).sort((a, b) => b[1].n - a[1].n).map(([b]) => b);
+  const fittedIds = [...realFitBot.entries()]
+    .filter(([, a]) => a.n >= minSeats)
+    .sort((a, b) => b[1].n - a[1].n)
+    .map(([b]) => b);
   const fitted = new Set(fittedIds);
   const realFit = new Map([...pooled(realFitBot, fitted)].map(([b, a]) => [b, summarize(a)]));
   const realHold = new Map([...pooled(realHoldBot, fitted)].map(([b, a]) => [b, summarize(a)]));
@@ -184,12 +206,15 @@ async function fit(): Promise<void> {
   const names = new Map<number, string>();
   {
     const db = openDb(HISTORY_DB, { readOnly: true });
-    for (const r of db.prepare(`SELECT id, name FROM bot`).all()) names.set(Number(r.id), String(r.name));
+    for (const r of db.prepare(`SELECT id, name FROM bot`).all())
+      names.set(Number(r.id), String(r.name));
     db.close();
   }
 
   const pool = new SimPool(workers);
-  const theta = new Map<number, number[]>(keys.map((k) => [k, toUnit(paramsToVec(DEFAULT_PARAMS))]));
+  const theta = new Map<number, number[]>(
+    keys.map((k) => [k, toUnit(paramsToVec(DEFAULT_PARAMS))]),
+  );
   const m1 = new Map<number, number[]>(keys.map((k) => [k, new Array<number>(D).fill(0)]));
   const m2 = new Map<number, number[]>(keys.map((k) => [k, new Array<number>(D).fill(0)]));
   const avg = new Map<number, number[]>(keys.map((k) => [k, new Array<number>(D).fill(0)]));
@@ -198,7 +223,11 @@ async function fit(): Promise<void> {
   const rng = rng32(12345);
   const keyOf = (b: number) => (fitted.has(b) ? b : GENERIC);
 
-  const meanLoss = (acc: Map<number, Acc>, real: Map<number, Record<SummaryKey, number>>, onlyFitted = true) => {
+  const meanLoss = (
+    acc: Map<number, Acc>,
+    real: Map<number, Record<SummaryKey, number>>,
+    onlyFitted = true,
+  ) => {
     let s = 0;
     let w = 0;
     for (const [b, a] of pooled(acc, fitted)) {
@@ -259,16 +288,25 @@ async function fit(): Promise<void> {
     }
     for (const [k, b] of best) theta.set(k, toUnit(b.v));
     const startAcc = await evalSet(pool, fitSet, (b) => fromUnit(theta.get(keyOf(b))!), 1, 600);
-    log(`multi-start (${cands.length} candidates): fit loss ${meanLoss(startAcc, realFit).toFixed(2)}`);
+    log(
+      `multi-start (${cands.length} candidates): fit loss ${meanLoss(startAcc, realFit).toFixed(2)}`,
+    );
   }
 
   for (let it = 0; it < iters; it++) {
     const lr = lr0 * (it < iters / 2 ? 1 : 0.5 + (0.5 * (iters - it)) / (iters / 2));
-    const delta = new Map<number, number[]>(keys.map((k) => [k, Array.from({ length: D }, () => (rng() < 0.5 ? -c : c))]));
-    const plus = (b: number) => fromUnit(theta.get(keyOf(b))!.map((x, i) => x + delta.get(keyOf(b))![i]!));
-    const minus = (b: number) => fromUnit(theta.get(keyOf(b))!.map((x, i) => x - delta.get(keyOf(b))![i]!));
+    const delta = new Map<number, number[]>(
+      keys.map((k) => [k, Array.from({ length: D }, () => (rng() < 0.5 ? -c : c))]),
+    );
+    const plus = (b: number) =>
+      fromUnit(theta.get(keyOf(b))!.map((x, i) => x + delta.get(keyOf(b))![i]!));
+    const minus = (b: number) =>
+      fromUnit(theta.get(keyOf(b))!.map((x, i) => x - delta.get(keyOf(b))![i]!));
     const seed = 1000 + it;
-    const res = await pool.run([...replayJobs(fitSet, plus, seed), ...replayJobs(fitSet, minus, seed)], 16);
+    const res = await pool.run(
+      [...replayJobs(fitSet, plus, seed), ...replayJobs(fitSet, minus, seed)],
+      16,
+    );
     const accP = pooled(simAcc(fitSet, res.slice(0, fitSet.length)), fitted);
     const accM = pooled(simAcc(fitSet, res.slice(fitSet.length)), fitted);
     let lp = 0;
@@ -307,11 +345,14 @@ async function fit(): Promise<void> {
         for (let i = 0; i < D; i++) a[i]! += (th[i]! - a[i]!) / nAvg;
       }
     }
-    if (it % 10 === 0 || it === iters - 1) log(`iter ${it}: fit loss +${(lp / w).toFixed(2)} -${(lm / w).toFixed(2)}`);
+    if (it % 10 === 0 || it === iters - 1)
+      log(`iter ${it}: fit loss +${(lp / w).toFixed(2)} -${(lm / w).toFixed(2)}`);
   }
 
   const finalTheta = nAvg > 0 ? avg : theta;
-  const vecs = new Map<number, number[]>(keys.map((k) => [k, paramsToVec(clampParams(paramsFromVec(fromUnit(finalTheta.get(k)!))))]));
+  const vecs = new Map<number, number[]>(
+    keys.map((k) => [k, paramsToVec(clampParams(paramsFromVec(fromUnit(finalTheta.get(k)!))))]),
+  );
   const vecFor = (b: number) => vecs.get(keyOf(b))!;
   const afterFit = await evalSet(pool, fitSet, vecFor, 2, 50);
   const afterHold = await evalSet(pool, holdSet, vecFor, 4, 60);
@@ -335,8 +376,15 @@ async function fit(): Promise<void> {
       tables: { fit: fitSet.length, holdout: holdSet.length },
       iters,
       lossScale: LOSS_SCALE,
-      holdoutLoss: { legacy: round(meanLoss(legacyHold, realHold), 3), defaultParams: round(meanLoss(defHold, realHold), 3), calibrated: round(meanLoss(afterHold, realHold), 3) },
-      fitLoss: { legacy: round(meanLoss(legacyFit, realFit), 3), calibrated: round(meanLoss(afterFit, realFit), 3) },
+      holdoutLoss: {
+        legacy: round(meanLoss(legacyHold, realHold), 3),
+        defaultParams: round(meanLoss(defHold, realHold), 3),
+        calibrated: round(meanLoss(afterHold, realHold), 3),
+      },
+      fitLoss: {
+        legacy: round(meanLoss(legacyFit, realFit), 3),
+        calibrated: round(meanLoss(afterFit, realFit), 3),
+      },
     },
   };
   for (const k of keys) {
@@ -346,7 +394,9 @@ async function fit(): Promise<void> {
     const sF = pf.get(k);
     const entry = {
       name: k === GENERIC ? "generic" : (names.get(k) ?? `#${k}`),
-      params: Object.fromEntries(Object.entries(paramsFromVec(vecs.get(k)!)).map(([a, v]) => [a, round(v, 4)])) as unknown as ClonesFile["generic"],
+      params: Object.fromEntries(
+        Object.entries(paramsFromVec(vecs.get(k)!)).map(([a, v]) => [a, round(v, 4)]),
+      ) as unknown as ClonesFile["generic"],
       fit: {
         nFit: realFitBot.get(k)?.n ?? 0,
         nHoldout: realHoldBot.get(k)?.n ?? 0,
@@ -366,12 +416,24 @@ async function fit(): Promise<void> {
 
   // Report: top 15 by seats.
   const cols: SummaryKey[] = ["score", "place", "tiles", "price", "wordLen", "bingos", "words"];
-  console.log(`\nholdout, real / calibrated / legacy\n${"bot".padEnd(18)}${cols.map((c) => c.padStart(22)).join("")}`);
+  console.log(
+    `\nholdout, real / calibrated / legacy\n${"bot".padEnd(18)}${cols.map((c) => c.padStart(22)).join("")}`,
+  );
   for (const k of fittedIds.slice(0, 15)) {
-    const e = out.bots[String(k)]!.fit! as unknown as { real: Record<string, number>; sim: Record<string, number>; legacy: Record<string, number> };
+    const e = out.bots[String(k)]!.fit! as unknown as {
+      real: Record<string, number>;
+      sim: Record<string, number>;
+      legacy: Record<string, number>;
+    };
     console.log(
       `${(names.get(k) ?? String(k)).slice(0, 17).padEnd(18)}` +
-        cols.map((c) => `${e.real[c]?.toFixed(2)}/${e.sim[c]?.toFixed(2)}/${e.legacy[c]?.toFixed(2)}`.padStart(22)).join(""),
+        cols
+          .map((c) =>
+            `${e.real[c]?.toFixed(2)}/${e.sim[c]?.toFixed(2)}/${e.legacy[c]?.toFixed(2)}`.padStart(
+              22,
+            ),
+          )
+          .join(""),
     );
   }
 }
@@ -388,14 +450,24 @@ function hasFlag(name: string): boolean {
  */
 function borrowForEntrants(clones: ClonesFile, f: FieldFile): void {
   const donors = Object.entries(clones.bots)
-    .filter(([, e]) => !e.borrowedFrom && e.fit && Number.isFinite(e.fit.real.score) && e.fit.nFit >= 100)
+    .filter(
+      ([, e]) => !e.borrowedFrom && e.fit && Number.isFinite(e.fit.real.score) && e.fit.nFit >= 100,
+    )
     .map(([id, e]) => ({ id: Number(id), score: e.fit!.real.score! }));
   let changed = 0;
   for (const e of f.entrants ?? []) {
     if (e.fitted) continue;
-    const d = donors.reduce((a, b) => (Math.abs(b.score - e.meanScore) < Math.abs(a.score - e.meanScore) ? b : a));
-    clones.bots[String(e.id)] = { name: e.name, params: { ...clones.bots[String(d.id)]!.params }, borrowedFrom: d.id };
-    log(`entrant ${e.name} (#${e.id}, score ${e.meanScore}): params borrowed from ${clones.bots[String(d.id)]!.name} (#${d.id}, score ${d.score})`);
+    const d = donors.reduce((a, b) =>
+      Math.abs(b.score - e.meanScore) < Math.abs(a.score - e.meanScore) ? b : a,
+    );
+    clones.bots[String(e.id)] = {
+      name: e.name,
+      params: { ...clones.bots[String(d.id)]!.params },
+      borrowedFrom: d.id,
+    };
+    log(
+      `entrant ${e.name} (#${e.id}, score ${e.meanScore}): params borrowed from ${clones.bots[String(d.id)]!.name} (#${d.id}, score ${d.score})`,
+    );
     changed++;
   }
   if (changed) fs.writeFileSync(CLONES_PATH, JSON.stringify(clones, null, 1) + "\n");
@@ -408,7 +480,11 @@ async function holdout(): Promise<void> {
   const holdSet = all.slice(cut);
   const clones = loadClonesFile();
   if (!clones) throw new Error("no data/clones.json");
-  const fitted = new Set(Object.entries(clones.bots).filter(([, e]) => e.fit && !e.borrowedFrom).map(([id]) => Number(id)));
+  const fitted = new Set(
+    Object.entries(clones.bots)
+      .filter(([, e]) => e.fit && !e.borrowedFrom)
+      .map(([id]) => Number(id)),
+  );
   const real = new Map([...pooled(accumulate(holdSet), fitted)].map(([b, a]) => [b, summarize(a)]));
   const pool = new SimPool(Math.min(8, arg("workers", 6)));
   const vecFor = (b: number) => paramsToVec(cloneParamsFor(b, clones));
@@ -423,7 +499,15 @@ async function holdout(): Promise<void> {
     const sm = summarize(a);
     s += lossOf(r, sm) * a.n;
     w += a.n;
-    for (const k of ["score", "place", "tiles", "price", "wordLen", "bingos", "words"] as SummaryKey[])
+    for (const k of [
+      "score",
+      "place",
+      "tiles",
+      "price",
+      "wordLen",
+      "bingos",
+      "words",
+    ] as SummaryKey[])
       bias.set(k, (bias.get(k) ?? 0) + (sm[k] - r[k]) * a.n);
   }
   log(
@@ -438,18 +522,22 @@ function writeField(): FieldFile {
   try {
     // Damo itself is not an opponent.
     const self = new Set<number>();
-    for (const r of db.prepare(`SELECT id FROM bot WHERE name LIKE 'Damo%'`).all()) self.add(Number(r.id));
+    for (const r of db.prepare(`SELECT id FROM bot WHERE name LIKE 'Damo%'`).all())
+      self.add(Number(r.id));
     const f = buildField(db, arg("window", 24), arg("half-life", 6), arg("active", 6), {
       top: arg("top", 16),
       minSeats: arg("min-seats", 30),
       exclude: self,
     });
     const clones = loadClonesFile();
-    for (const e of f.entrants ?? []) e.fitted = !!clones?.bots[String(e.id)] && !clones.bots[String(e.id)]!.borrowedFrom;
+    for (const e of f.entrants ?? [])
+      e.fitted = !!clones?.bots[String(e.id)] && !clones.bots[String(e.id)]!.borrowedFrom;
     if (clones && hasFlag("borrow")) borrowForEntrants(clones, f);
     f.note += ` Source ${path.basename(dbPath)}. entrants: likely tournament field, see FieldFile.entrants.`;
     fs.writeFileSync(FIELD_PATH, JSON.stringify(f) + "\n");
-    log(`wrote ${FIELD_PATH}: ${f.tables.length} tables, ${Object.keys(f.bots).length} bots, data until ${f.dataUntil}`);
+    log(
+      `wrote ${FIELD_PATH}: ${f.tables.length} tables, ${Object.keys(f.bots).length} bots, data until ${f.dataUntil}`,
+    );
     for (const [i, e] of (f.entrants ?? []).entries())
       console.log(
         `${String(i + 1).padStart(3)} ${e.name.slice(0, 18).padEnd(19)}#${String(e.id).padEnd(4)} beat ${e.beatShare.toFixed(3)} ` +
@@ -472,7 +560,8 @@ async function evalField(): Promise<void> {
   let tables: number[][];
   if (mode === "entrants") {
     const ids = (f.entrants ?? []).map((e) => e.id);
-    if (ids.length < size - 1) throw new Error(`field.json has ${ids.length} entrants, need ${size - 1}`);
+    if (ids.length < size - 1)
+      throw new Error(`field.json has ${ids.length} entrants, need ${size - 1}`);
     // Damo in seat 0 placeholder, then size-1 distinct entrants; seat order shuffled.
     tables = Array.from({ length: n }, () => {
       const pool = [...ids];
@@ -484,13 +573,18 @@ async function evalField(): Promise<void> {
       }
       return t;
     });
-    console.log(`entrants mode: ${n} tables of ${size}, Damo + ${size - 1} of ${ids.length} entrants, no sims`);
+    console.log(
+      `entrants mode: ${n} tables of ${size}, Damo + ${size - 1} of ${ids.length} entrants, no sims`,
+    );
   } else tables = sampleField(f, n, rng);
   const K13 = 1_000_000;
   const mk = (legacy: boolean): MatchJob[] =>
     tables.map((bots, i) => {
       const real = bots.map((b, j) => (b ? j : -1)).filter((j) => j >= 0);
-      const swap = bots.indexOf(-1) >= 0 ? bots.indexOf(-1) : (real[Math.floor(rng32(i * 31 + 5)() * real.length)] ?? 0);
+      const swap =
+        bots.indexOf(-1) >= 0
+          ? bots.indexOf(-1)
+          : (real[Math.floor(rng32(i * 31 + 5)() * real.length)] ?? 0);
       return {
         seed: 900_000 + i,
         seats: bots.map((b, j): SeatJob => {
@@ -521,9 +615,12 @@ async function evalField(): Promise<void> {
       });
     });
     const sm = swiss.reduce((a, b) => a + b, 0) / swiss.length;
-    const ssd = Math.sqrt(swiss.reduce((a, b) => a + (b - sm) ** 2, 0) / (swiss.length - 1) / swiss.length);
+    const ssd = Math.sqrt(
+      swiss.reduce((a, b) => a + (b - sm) ** 2, 0) / (swiss.length - 1) / swiss.length,
+    );
     const m = (k: number) => pal.reduce((a, v) => a + v[k]!, 0) / pal.length;
-    const sd = (k: number) => Math.sqrt(pal.reduce((a, v) => a + (v[k]! - m(k)) ** 2, 0) / (pal.length - 1) / pal.length);
+    const sd = (k: number) =>
+      Math.sqrt(pal.reduce((a, v) => a + (v[k]! - m(k)) ** 2, 0) / (pal.length - 1) / pal.length);
     // indexes per STAT_KEYS: score 0, place 1, win 2, tiles 3, paid 4, words 6, letters 7, bingos 8
     const tiles = m(3);
     console.log(
@@ -540,7 +637,15 @@ async function evalField(): Promise<void> {
 if (isMain(import.meta.url)) {
   const cmd = process.argv[2];
   const run =
-    cmd === "fit" ? fit : cmd === "field" ? async () => void writeField() : cmd === "eval" ? evalField : cmd === "holdout" ? holdout : null;
+    cmd === "fit"
+      ? fit
+      : cmd === "field"
+        ? async () => void writeField()
+        : cmd === "eval"
+          ? evalField
+          : cmd === "holdout"
+            ? holdout
+            : null;
   if (!run) {
     console.error("usage: calibrate.ts fit|field|eval|holdout [options]");
     process.exit(2);

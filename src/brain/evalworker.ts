@@ -6,7 +6,11 @@ import { loadEnv, runJob, type Job } from "./evaljobs.js";
 
 const port = parentPort;
 if (!port) throw new Error("evalworker.ts must run in a worker thread");
-const data = workerData as { variants: Record<string, Record<string, unknown>>; model: boolean; budgetMs?: number };
+const data = workerData as {
+  variants: Record<string, Record<string, unknown>>;
+  model: boolean;
+  budgetMs?: number;
+};
 const env = await loadEnv(data.variants, data.model);
 env.budgetMs = data.budgetMs;
 
@@ -18,7 +22,10 @@ port.on("message", (m: { type: "run"; jobs: Job[] } | { type: "exit" }) => {
   try {
     port.postMessage({ type: "done", results: m.jobs.map((j) => runJob(env, j)) });
   } catch (e) {
-    port.postMessage({ type: "error", message: e instanceof Error ? (e.stack ?? e.message) : String(e) });
+    port.postMessage({
+      type: "error",
+      message: e instanceof Error ? (e.stack ?? e.message) : String(e),
+    });
   }
 });
 port.postMessage({ type: "ready" });

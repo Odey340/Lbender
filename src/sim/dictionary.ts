@@ -84,10 +84,7 @@ const U32_MAX = 0xffffffff;
 
 // Longest word spellable from `rack`, first alphabetically among equals;
 // undefined if none has `minLen` or more letters. Literal server port.
-export function findBestPlayable(
-  rack: Map<string, number>,
-  minLen: number,
-): string | undefined {
+export function findBestPlayable(rack: Map<string, number>, minLen: number): string | undefined {
   const rackCounts = new Array<number>(26).fill(0);
   let total = 0;
   for (const [c, n] of rack) {

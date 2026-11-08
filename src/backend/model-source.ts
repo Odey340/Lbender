@@ -42,13 +42,18 @@ export interface LoadTimings {
  * A fresh in-memory SQLite database holding what the opponent model reads.
  * Throws when the backend can't be reached.
  */
-export function backendSnapshotDb(where: { db?: string; uri?: string } = {}, timings: LoadTimings[] = []): Db {
+export function backendSnapshotDb(
+  where: { db?: string; uri?: string } = {},
+  timings: LoadTimings[] = [],
+): Db {
   const o = { db: where.db ?? DEFAULT_DB, uri: where.uri ?? DEFAULT_URI, timeoutMs: 60_000 };
   const mem = openDb(":memory:");
   const copy = (query: string, table: string, cols: string[], row: (r: SqlRow) => unknown[]) => {
     const t0 = performance.now();
     const rows = sqlSync(query, o);
-    const st = mem.prepare(`INSERT OR REPLACE INTO ${table} (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})`);
+    const st = mem.prepare(
+      `INSERT OR REPLACE INTO ${table} (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})`,
+    );
     mem.exec("BEGIN");
     try {
       for (const r of rows) st.run(...row(r).map(v));
@@ -59,44 +64,168 @@ export function backendSnapshotDb(where: { db?: string; uri?: string } = {}, tim
     }
     timings.push({ table, rows: rows.length, ms: performance.now() - t0 });
   };
-  copy("SELECT * FROM g_bot", "bot", ["id", "name", "team_id", "is_simulated", "strategy", "created_us", "deleted_us"], (r) => [
-    r.id, r.name, r.team_id, r.is_simulated, r.strategy, r.created_at, r.deleted_at,
-  ]);
-  copy("SELECT * FROM g_bot_version", "bot_version", ["id", "bot_id", "version", "started_us"], (r) => [
-    r.id, r.bot_id, r.version, r.started_at,
-  ]);
+  copy(
+    "SELECT * FROM g_bot",
+    "bot",
+    ["id", "name", "team_id", "is_simulated", "strategy", "created_us", "deleted_us"],
+    (r) => [r.id, r.name, r.team_id, r.is_simulated, r.strategy, r.created_at, r.deleted_at],
+  );
+  copy(
+    "SELECT * FROM g_bot_version",
+    "bot_version",
+    ["id", "bot_id", "version", "started_us"],
+    (r) => [r.id, r.bot_id, r.version, r.started_at],
+  );
   copy(
     "SELECT * FROM g_bot_stats",
     "bot_stats",
     ["bot_id", "rating", "matches_played", "wins", "total_score", "last_played_us", "mu", "sigma"],
-    (r) => [r.bot_id, r.rating, r.matches_played, r.wins, r.total_score, r.last_played, r.openskill_mu, r.openskill_sigma],
+    (r) => [
+      r.bot_id,
+      r.rating,
+      r.matches_played,
+      r.wins,
+      r.total_score,
+      r.last_played,
+      r.openskill_mu,
+      r.openskill_sigma,
+    ],
   );
-  copy("SELECT * FROM bid_model", "bid_model", ["bot_id", "fitted_us", "data_us", "n_obs", "params"], (r) => [
-    r.bot_id, r.fitted_at, r.data_at, r.n_obs, r.params,
-  ]);
+  copy(
+    "SELECT * FROM bid_model",
+    "bid_model",
+    ["bot_id", "fitted_us", "data_us", "n_obs", "params"],
+    (r) => [r.bot_id, r.fitted_at, r.data_at, r.n_obs, r.params],
+  );
   copy(
     "SELECT * FROM d_match_info",
     "match_info",
-    ["match_id", "n_seats", "n_real", "n_auctions", "expected_auctions", "auction_type", "created_us", "ended_us", "balance_ok", "derived_us"],
-    (r) => [r.match_id, r.n_seats, r.n_real, r.n_auctions, r.expected_auctions, r.auction_type, r.created_at, r.ended_at, r.balance_ok, r.derived_at],
+    [
+      "match_id",
+      "n_seats",
+      "n_real",
+      "n_auctions",
+      "expected_auctions",
+      "auction_type",
+      "created_us",
+      "ended_us",
+      "balance_ok",
+      "derived_us",
+    ],
+    (r) => [
+      r.match_id,
+      r.n_seats,
+      r.n_real,
+      r.n_auctions,
+      r.expected_auctions,
+      r.auction_type,
+      r.created_at,
+      r.ended_at,
+      r.balance_ok,
+      r.derived_at,
+    ],
   );
   copy(
     "SELECT * FROM d_match_seat",
     "match_seat",
-    ["match_id", "bot_id", "is_sim", "strategy", "version", "final_score", "final_balance", "place", "won_tiles", "paid_total", "words", "letters_played", "tiles_left", "ended_us"],
-    (r) => [r.match_id, r.bot_id, r.is_sim, r.strategy, r.version, r.final_score, r.final_balance, r.place, r.won_tiles, r.paid_total, r.words, r.letters_played, r.tiles_left, r.ended_at],
+    [
+      "match_id",
+      "bot_id",
+      "is_sim",
+      "strategy",
+      "version",
+      "final_score",
+      "final_balance",
+      "place",
+      "won_tiles",
+      "paid_total",
+      "words",
+      "letters_played",
+      "tiles_left",
+      "ended_us",
+    ],
+    (r) => [
+      r.match_id,
+      r.bot_id,
+      r.is_sim,
+      r.strategy,
+      r.version,
+      r.final_score,
+      r.final_balance,
+      r.place,
+      r.won_tiles,
+      r.paid_total,
+      r.words,
+      r.letters_played,
+      r.tiles_left,
+      r.ended_at,
+    ],
   );
   copy(
     "SELECT * FROM d_auction_ctx",
     "auction_ctx",
-    ["auction_id", "match_id", "round_idx", "n_auctions", "phase", "letter", "winner_bot_id", "winner_is_sim", "paid", "top_bid", "closed_us", "ended_us", "sim_q"],
-    (r) => [r.auction_id, r.match_id, r.round_idx, r.n_auctions, r.phase, r.letter, r.winner_bot_id, r.winner_is_sim, r.paid, r.top_bid, r.closed_at, r.ended_at, r.sim_q],
+    [
+      "auction_id",
+      "match_id",
+      "round_idx",
+      "n_auctions",
+      "phase",
+      "letter",
+      "winner_bot_id",
+      "winner_is_sim",
+      "paid",
+      "top_bid",
+      "closed_us",
+      "ended_us",
+      "sim_q",
+    ],
+    (r) => [
+      r.auction_id,
+      r.match_id,
+      r.round_idx,
+      r.n_auctions,
+      r.phase,
+      r.letter,
+      r.winner_bot_id,
+      r.winner_is_sim,
+      r.paid,
+      r.top_bid,
+      r.closed_at,
+      r.ended_at,
+      r.sim_q,
+    ],
   );
   copy(
     "SELECT * FROM d_play_obs",
     "play_obs",
-    ["word_id", "match_id", "bot_id", "is_sim", "word", "len", "reward", "round_idx", "phase", "rack_before", "balance_before", "ended_us"],
-    (r) => [r.word_id, r.match_id, r.bot_id, r.is_sim, r.word, r.len, r.reward, r.round_idx, r.phase, r.rack_before, r.balance_before, r.ended_at],
+    [
+      "word_id",
+      "match_id",
+      "bot_id",
+      "is_sim",
+      "word",
+      "len",
+      "reward",
+      "round_idx",
+      "phase",
+      "rack_before",
+      "balance_before",
+      "ended_us",
+    ],
+    (r) => [
+      r.word_id,
+      r.match_id,
+      r.bot_id,
+      r.is_sim,
+      r.word,
+      r.len,
+      r.reward,
+      r.round_idx,
+      r.phase,
+      r.rack_before,
+      r.balance_before,
+      r.ended_at,
+    ],
   );
   return mem;
 }

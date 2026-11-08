@@ -91,18 +91,41 @@ function parseArgs(argv: string[]): Args {
       return x;
     };
     switch (k) {
-      case "--setting": a.setting = v(); break;
-      case "--deals": a.deals = Number(v()); break;
-      case "--gens": a.gens = Number(v()); break;
-      case "--pop": a.pop = Number(v()); break;
-      case "--elite": a.elite = Number(v()); break;
-      case "--workers": a.workers = Number(v()); break;
-      case "--seed": a.seed = Number(v()); break;
-      case "--matches": a.matches = Number(v()); break;
-      case "--keys": a.keys = v().split(",") as (keyof Params)[]; break;
-      case "--write": a.write = true; break;
-      case "--log": a.log = v(); break;
-      default: throw new Error(`unknown flag ${k}`);
+      case "--setting":
+        a.setting = v();
+        break;
+      case "--deals":
+        a.deals = Number(v());
+        break;
+      case "--gens":
+        a.gens = Number(v());
+        break;
+      case "--pop":
+        a.pop = Number(v());
+        break;
+      case "--elite":
+        a.elite = Number(v());
+        break;
+      case "--workers":
+        a.workers = Number(v());
+        break;
+      case "--seed":
+        a.seed = Number(v());
+        break;
+      case "--matches":
+        a.matches = Number(v());
+        break;
+      case "--keys":
+        a.keys = v().split(",") as (keyof Params)[];
+        break;
+      case "--write":
+        a.write = true;
+        break;
+      case "--log":
+        a.log = v();
+        break;
+      default:
+        throw new Error(`unknown flag ${k}`);
     }
   }
   for (const key of a.keys) if (!RANGES[key]) throw new Error(`no search range for '${key}'`);
@@ -138,11 +161,23 @@ async function main() {
   for (let g = 0; g < args.gens; g++) {
     const t0 = performance.now();
     const cands: number[][] = [mean.slice()];
-    while (cands.length < args.pop) cands.push(mean.map((m, j) => clip(j, m + sd[j]! * normal(rand))));
-    const spec = { settings, deals: args.deals, agents: ["x"], seed: args.seed, dealOffset: g * args.deals };
+    while (cands.length < args.pop)
+      cands.push(mean.map((m, j) => clip(j, m + sd[j]! * normal(rand))));
+    const spec = {
+      settings,
+      deals: args.deals,
+      agents: ["x"],
+      seed: args.seed,
+      dealOffset: g * args.deals,
+    };
     const base = buildJobs(spec, field, top);
     const jobs = cands.flatMap((x, ci) =>
-      base.map((j, i) => ({ ...j, id: ci * base.length + i, agent: `c${ci}`, params: toParams(x) })),
+      base.map((j, i) => ({
+        ...j,
+        id: ci * base.length + i,
+        agent: `c${ci}`,
+        params: toParams(x),
+      })),
     );
     const results = await pool.run(jobs);
     const by = new Map<string, JobResult[]>();
@@ -180,9 +215,7 @@ async function main() {
     console.log(
       `gen ${g}: incumbent place ${inc.place.toFixed(3)} score ${inc.score.toFixed(1)} | best ${fit[0]!.place.toFixed(3)} | ${line.secs}s`,
     );
-    console.log(
-      "  mean " + args.keys.map((k, j) => `${k}=${mean[j]!.toFixed(3)}`).join(" "),
-    );
+    console.log("  mean " + args.keys.map((k, j) => `${k}=${mean[j]!.toFixed(3)}`).join(" "));
   }
   await pool.close();
   log?.end();
