@@ -18,7 +18,9 @@
     "test:it": "DAMO_IT=1 node --import tsx --test \"src/**/*.test.ts\"",
     "rehearse": "tsx scripts/rehearse/run.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "bot:lbender": "tsx src/bot.ts --agent lbender",
+    "test:lbender": "node --import tsx --test \"src/lbender/**/*.test.ts\""
   },
   "dependencies": {
     "spacetimedb": "^2.12.0",
