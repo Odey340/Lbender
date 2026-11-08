@@ -18,7 +18,7 @@ import { SIM_STRATEGIES, type SimStrategy } from "./engine.js";
 import { FastStarterAgent } from "./fast-starter.js";
 import type { Shuffler } from "./rng.js";
 
-export type SeatKind = "palace" | "starter" | "sim" | "clone" | "idle";
+export type SeatKind = "palace" | "lbender" | "starter" | "sim" | "clone" | "idle";
 
 export interface SeatSpec {
   /** Canonical spec string; stats are keyed by it. */
@@ -46,13 +46,14 @@ export const SIM_POOL: readonly { botId: number; name: string; strategy: SimStra
 export const SYNTHETIC_ID_BASE = 1_000_000;
 
 const SPEC_HELP =
-  "use palace, palace#<variant>, starter, sim:Cheapskate|ValueBidder|Aggressive, clone:<botId> or idle";
+  "use lbender, palace, palace#<variant>, starter, sim:Cheapskate|ValueBidder|Aggressive, clone:<botId> or idle";
 
 export function parseSeatSpec(raw: string): SeatSpec {
   const s = raw.trim();
   if (s === "palace") return { spec: s, kind: "palace" };
   const variant = /^palace#([\w.-]+)$/.exec(s);
   if (variant) return { spec: s, kind: "palace", variant: variant[1] };
+  if (s === "lbender") return { spec: s, kind: "lbender" };
   if (s === "starter") return { spec: s, kind: "starter" };
   if (s === "idle") return { spec: s, kind: "idle" };
   const sim = /^sim:(\w+)$/i.exec(s);
@@ -189,6 +190,11 @@ export async function loadRegistry(
   const kinds = new Set(specs.map((s) => s.kind));
 
   let createPalace: ((o: object) => Agent) | undefined;
+  let createLbender: (() => Agent) | undefined;
+  if (kinds.has("lbender")) {
+    const mod = await importIfPresent("../lbender/agent.js");
+    createLbender = need(mod, "src/lbender/agent.ts", "createLbenderAgent", "seat lbender") as () => Agent;
+  }
   let model: unknown;
   if (kinds.has("palace")) {
     const brain = await importIfPresent("../brain/index.js");
@@ -233,6 +239,8 @@ export async function loadRegistry(
         case "sim":
         case "idle":
           return undefined;
+        case "lbender":
+          return createLbender!();
         case "starter":
           return new FastStarterAgent();
         case "palace": {
