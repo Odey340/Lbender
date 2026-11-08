@@ -9,7 +9,11 @@
 
 import type { Identity } from "spacetimedb";
 import type { Agent, MatchView } from "../core/types.js";
-import { DbConnection, type EventContext, type SubscriptionHandle } from "../module_bindings/index.js";
+import {
+  DbConnection,
+  type EventContext,
+  type SubscriptionHandle,
+} from "../module_bindings/index.js";
 import { Bidder, type BidderOptions, type BidTransport } from "./bidder.js";
 import { BusyTracker, ClockSync } from "./clock.js";
 import { errMsg, type DecisionLog } from "./log.js";
@@ -88,7 +92,8 @@ interface Roster {
   resumed: boolean;
 }
 
-const isLive = (ctx: EventContext) => ctx.event.tag === "Transaction" || ctx.event.tag === "Reducer";
+const isLive = (ctx: EventContext) =>
+  ctx.event.tag === "Transaction" || ctx.event.tag === "Reducer";
 
 export class Session {
   conn: DbConnection | null = null;
@@ -120,7 +125,10 @@ export class Session {
   /** Damo backend telemetry (live runs; DAMO_TELEMETRY=0 turns it off). */
   private telemetry: Telemetry | null = null;
   /** Registration attempts per tournament id (auto or TOURNAMENT_ID). */
-  private reg = new Map<bigint, { attempts: number; nextAt: number; inFlight: boolean; done: boolean }>();
+  private reg = new Map<
+    bigint,
+    { attempts: number; nextAt: number; inFlight: boolean; done: boolean }
+  >();
   /** No join_lobby before this (set when the server says we are held for a tournament). */
   private lobbyBackoffUntil = 0;
   /** Last auction open/close of the current match seen on the feed (feed watchdog). */
@@ -198,8 +206,12 @@ export class Session {
     this.startTelemetry();
     this.connect();
     this.timers.push(setInterval(() => this.guard("tick", () => this.tick()), 5000));
-    if (this.o.stallMs !== 0) this.timers.push(setInterval(() => this.guard("watchdog", () => this.checkFeed()), 1000));
-    if (this.blindCfg.enabled) this.timers.push(setInterval(() => this.guard("blind dump", () => this.checkBlindDump()), 250));
+    if (this.o.stallMs !== 0)
+      this.timers.push(setInterval(() => this.guard("watchdog", () => this.checkFeed()), 1000));
+    if (this.blindCfg.enabled)
+      this.timers.push(
+        setInterval(() => this.guard("blind dump", () => this.checkBlindDump()), 250),
+      );
   }
 
   /**
@@ -225,8 +237,18 @@ export class Session {
     this.blindDumps++;
     const silentMs = now - this.lastFeedAt;
     const estBag = estimatedBag(view.bagTotal, silentMs, this.auctionMs);
-    this.o.log.write("blind_dump", { match: matchId, silentMs, cachedBag: view.bagTotal, estBag, rack: rackString(rack), words: sent, dumps: this.blindDumps });
-    this.o.log.warn(`feed silent ${Math.round(silentMs / 100) / 10} s with ~${estBag} tiles left in match ${matchId}: blind dump ${sent.join(" ") || "(nothing playable)"}`);
+    this.o.log.write("blind_dump", {
+      match: matchId,
+      silentMs,
+      cachedBag: view.bagTotal,
+      estBag,
+      rack: rackString(rack),
+      words: sent,
+      dumps: this.blindDumps,
+    });
+    this.o.log.warn(
+      `feed silent ${Math.round(silentMs / 100) / 10} s with ~${estBag} tiles left in match ${matchId}: blind dump ${sent.join(" ") || "(nothing playable)"}`,
+    );
   }
 
   /** Mid-match silence past the limit: the stream has stalled; drop and resync. */
@@ -238,8 +260,15 @@ export class Session {
     this.stalls++;
     const silentMs = now - this.lastFeedAt;
     this.lastFeedAt = now;
-    this.o.log.write("stall", { match: this.current, silentMs, limitMs: stallLimitMs(this.auctionMs, this.o.stallMs), stalls: this.stalls });
-    this.o.log.warn(`no auction updates for ${Math.round(silentMs / 100) / 10} s in match ${this.current}: feed stalled, reconnecting`);
+    this.o.log.write("stall", {
+      match: this.current,
+      silentMs,
+      limitMs: stallLimitMs(this.auctionMs, this.o.stallMs),
+      stalls: this.stalls,
+    });
+    this.o.log.warn(
+      `no auction updates for ${Math.round(silentMs / 100) / 10} s in match ${this.current}: feed stalled, reconnecting`,
+    );
     try {
       conn.disconnect();
     } catch {
@@ -273,18 +302,30 @@ export class Session {
   private heartbeat() {
     const c = this.clock.snapshot();
     this.telemetry?.heartbeat({
-      state: this.stopping ? "stopping" : !this.ready ? "connecting" : this.current !== null ? "match" : "lobby",
+      state: this.stopping
+        ? "stopping"
+        : !this.ready
+          ? "connecting"
+          : this.current !== null
+            ? "match"
+            : "lobby",
       currentMatch: this.current ?? undefined,
       latencyMs: c.rttP50 ?? 0,
       clockOffsetMs: c.offsetMs ?? 0,
-      version: `${this.o.agentLabel}${process.env.DAMO_VERSION ? `@${process.env.DAMO_VERSION}` : ""}`.slice(0, 64),
+      version:
+        `${this.o.agentLabel}${process.env.DAMO_VERSION ? `@${process.env.DAMO_VERSION}` : ""}`.slice(
+          0,
+          64,
+        ),
     });
   }
 
   private connect() {
     if (this.stopping) return;
     const t0 = Date.now();
-    this.o.log.human(`connecting to ${this.o.db} at ${this.o.host}${this.o.dryRun ? " (dry run, anonymous)" : ""}`);
+    this.o.log.human(
+      `connecting to ${this.o.db} at ${this.o.host}${this.o.dryRun ? " (dry run, anonymous)" : ""}`,
+    );
     let built: DbConnection | null = null;
     try {
       built = DbConnection.builder()
@@ -300,8 +341,14 @@ export class Session {
               this.o.token = token;
               this.o.saveToken?.(token);
             }
-            this.o.log.write("connect", { identity: identity.toHexString().slice(0, 16), connectMs: Date.now() - t0, dryRun: this.o.dryRun });
-            this.o.log.human(`connected in ${Date.now() - t0} ms as ${identity.toHexString().slice(0, 12)}…`);
+            this.o.log.write("connect", {
+              identity: identity.toHexString().slice(0, 16),
+              connectMs: Date.now() - t0,
+              dryRun: this.o.dryRun,
+            });
+            this.o.log.human(
+              `connected in ${Date.now() - t0} ms as ${identity.toHexString().slice(0, 12)}…`,
+            );
             this.wire(conn);
             this.sync(conn, identity, t0).catch((e) => this.onSyncError(conn, e));
           }),
@@ -374,21 +421,35 @@ export class Session {
     }
   }
 
-  private subscribe(conn: DbConnection, queries: string[], label: string): Promise<{ handle: Handle; ms: number }> {
+  private subscribe(
+    conn: DbConnection,
+    queries: string[],
+    label: string,
+  ): Promise<{ handle: Handle; ms: number }> {
     assertAllowed(queries);
     const t0 = Date.now();
     return new Promise((res, rej) => {
       const handle = conn
         .subscriptionBuilder()
         .onApplied(() => res({ handle, ms: Date.now() - t0 }))
-        .onError((ctx) => rej(new Error(`subscription '${label}' failed: ${ctx.event ? errMsg(ctx.event) : "unknown"}`)))
+        .onError((ctx) =>
+          rej(
+            new Error(
+              `subscription '${label}' failed: ${ctx.event ? errMsg(ctx.event) : "unknown"}`,
+            ),
+          ),
+        )
         .subscribe(queries);
     });
   }
 
   private async sync(conn: DbConnection, identity: Identity, t0: number) {
     const timing: Record<string, number> = { connectMs: Date.now() - t0 };
-    const base = await this.subscribe(conn, baseQueries(this.o.dryRun ? null : identity.toHexString()), "base");
+    const base = await this.subscribe(
+      conn,
+      baseQueries(this.o.dryRun ? null : identity.toHexString()),
+      "base",
+    );
     timing.baseMs = base.ms;
 
     let botId: bigint | undefined;
@@ -407,7 +468,9 @@ export class Session {
       // Not fatal: without it the bot still plays, registers via TOURNAMENT_ID and reads its own entries.
       this.subscribe(conn, tournamentQueries(), "tournaments").catch((e: unknown) => {
         this.o.log.write("error", { where: "tournament subscription", err: errMsg(e) });
-        this.o.log.warn(`tournament tables unavailable (${errMsg(e)}): auto-registration and stage context off for this connection`);
+        this.o.log.warn(
+          `tournament tables unavailable (${errMsg(e)}): auto-registration and stage context off for this connection`,
+        );
         return null;
       }),
     ]);
@@ -415,7 +478,9 @@ export class Session {
     timing.botMs = mine.ms;
     timing.seatsMs = history.ms;
     const seatRows = [...conn.db.matchParticipant.mpByBot.filter(botId)].length;
-    const after = anchorFor([...conn.db.matchParticipant.mpByBot.filter(botId)].map((p) => p.matchId));
+    const after = anchorFor(
+      [...conn.db.matchParticipant.mpByBot.filter(botId)].map((p) => p.matchId),
+    );
     const [anchored, rack] = await Promise.all([
       this.subscribe(conn, anchoredQueries(botId, after), "anchor"),
       this.subscribeRack(conn, after),
@@ -439,7 +504,13 @@ export class Session {
       wordPlay: Number(conn.db.wordPlay.count()),
       myRack: Number(conn.db.myRack.count()),
     };
-    const rec = { bot: Number(botId), name: bot?.name ?? null, anchor: Number(after), ...timing, rows };
+    const rec = {
+      bot: Number(botId),
+      name: bot?.name ?? null,
+      anchor: Number(after),
+      ...timing,
+      rows,
+    };
     this.syncs.push(rec);
     this.o.log.write("sync", rec);
     this.o.log.human(
@@ -470,7 +541,10 @@ export class Session {
   }
 
   private async claim(conn: DbConnection, identity: Identity): Promise<bigint> {
-    if (!this.o.nonce) throw new FatalError("this token has no bot credential: set BOT_TOKEN or BOT_NONCE and re-run");
+    if (!this.o.nonce)
+      throw new FatalError(
+        "this token has no bot credential: set BOT_TOKEN or BOT_NONCE and re-run",
+      );
     if (this.claimed) throw new FatalError("credential claim did not stick");
     this.claimed = true;
     this.o.log.human("claiming credential with nonce…");
@@ -492,7 +566,10 @@ export class Session {
     throw new FatalError("claimed, but no bot_credential row arrived");
   }
 
-  private async subscribeRack(conn: DbConnection, after: bigint): Promise<{ handle: Handle; after: bigint | null }> {
+  private async subscribeRack(
+    conn: DbConnection,
+    after: bigint,
+  ): Promise<{ handle: Handle; after: bigint | null }> {
     try {
       const r = await this.subscribe(conn, [rackQuery(after)], "rack");
       return { handle: r.handle, after };
@@ -694,7 +771,8 @@ export class Session {
     let running: bigint | null = null;
     for (const p of conn.db.matchParticipant.mpByBot.filter(me)) {
       const m = conn.db.matchState.id.find(p.matchId);
-      if (m?.status.tag === "Running" && (running === null || p.matchId > running)) running = p.matchId;
+      if (m?.status.tag === "Running" && (running === null || p.matchId > running))
+        running = p.matchId;
     }
     if (running === this.current) return;
     const prev = this.current;
@@ -710,7 +788,8 @@ export class Session {
     if (!conn || this.current === null) return;
     for (const a of conn.db.auction.auctionByMatch.filter(this.current)) {
       if (a.status.tag !== "Open") continue;
-      if (this.roster?.matchId === a.matchId && !this.roster.ready) this.roster.queued.push({ a, recv: Date.now(), fresh: false });
+      if (this.roster?.matchId === a.matchId && !this.roster.ready)
+        this.roster.queued.push({ a, recv: Date.now(), fresh: false });
       else this.bidder.onOpen(a, Date.now(), false);
     }
     this.words.schedule(this.current);
@@ -720,7 +799,13 @@ export class Session {
   private onMatchStart(matchId: bigint) {
     const conn = this.conn;
     if (!conn) return;
-    const roster: Roster = { matchId, handle: null, ready: false, queued: [], resumed: this.disconnectedFrom === matchId };
+    const roster: Roster = {
+      matchId,
+      handle: null,
+      ready: false,
+      queued: [],
+      resumed: this.disconnectedFrom === matchId,
+    };
     this.lastFeedAt = Date.now();
     this.roster = roster;
     const t0 = Date.now();
@@ -735,7 +820,8 @@ export class Session {
         if (err) this.o.log.write("error", { where: "roster", match: matchId, err: errMsg(err) });
         this.logMatchStart(matchId, Date.now() - t0, roster.resumed);
         for (const q of roster.queued.splice(0)) {
-          if (conn.db.auction.id.find(q.a.id)?.status.tag === "Open") this.bidder.onOpen(q.a, q.recv, q.fresh);
+          if (conn.db.auction.id.find(q.a.id)?.status.tag === "Open")
+            this.bidder.onOpen(q.a, q.recv, q.fresh);
         }
         this.words.schedule(matchId);
       });
@@ -747,7 +833,12 @@ export class Session {
 
   private logMatchStart(matchId: bigint, rosterMs: number, resumed: boolean) {
     const view = this.viewFor(matchId);
-    const seats = view?.participants.map((p) => ({ bot: p.botId, name: this.botName(p.botId), sim: p.isSim })) ?? [];
+    const seats =
+      view?.participants.map((p) => ({
+        bot: p.botId,
+        name: this.botName(p.botId),
+        sim: p.isSim,
+      })) ?? [];
     this.o.log.write("match_start", {
       match: matchId,
       me: this.botId,
@@ -758,7 +849,12 @@ export class Session {
       agent: this.o.agentLabel,
       rosterMs,
       tournament: view?.tournament
-        ? { phase: view.tournament.phase, round: view.tournament.round, entrants: view.tournament.standings.length, finalTotals: view.tournament.finalTotals }
+        ? {
+            phase: view.tournament.phase,
+            round: view.tournament.round,
+            entrants: view.tournament.standings.length,
+            finalTotals: view.tournament.finalTotals,
+          }
         : undefined,
       resumed: resumed || undefined,
       dryRun: this.o.dryRun || undefined,
@@ -766,7 +862,10 @@ export class Session {
     this.o.log.human(
       `${resumed ? "back in" : "seated in"} ${view?.tournament ? `TOURNAMENT ${view.tournament.phase} round ${view.tournament.round} ` : ""}` +
         `match ${matchId} (${view?.auctionType ?? "?"}, round ${view?.round ?? "?"}) vs ` +
-        seats.filter((s) => BigInt(s.bot) !== this.botId).map((s) => `${s.name}${s.sim ? "*" : ""}`).join(", "),
+        seats
+          .filter((s) => BigInt(s.bot) !== this.botId)
+          .map((s) => `${s.name}${s.sim ? "*" : ""}`)
+          .join(", "),
     );
   }
 
@@ -835,7 +934,11 @@ export class Session {
         this.o.log.write("error", { where: "onMatchEnd", err: errMsg(e) });
       }
     } else {
-      this.o.log.write("match_end", { match: matchId, me: this.botId, note: "rows gone before end was seen" });
+      this.o.log.write("match_end", {
+        match: matchId,
+        me: this.botId,
+        note: "rows gone before end was seen",
+      });
     }
     this.words.forget(matchId);
     if (this.roster?.matchId === matchId) {
@@ -855,21 +958,39 @@ export class Session {
   private heldForTournament(): boolean {
     const conn = this.conn;
     if (!conn || this.botId === null) return false;
-    return heldBy(conn.db.tournament.iter(), conn.db.tournamentEntry.teByBot.filter(this.botId), this.botId) !== null;
+    return (
+      heldBy(
+        conn.db.tournament.iter(),
+        conn.db.tournamentEntry.teByBot.filter(this.botId),
+        this.botId,
+      ) !== null
+    );
   }
 
   private async maybeJoinLobby(reason: string) {
     const conn = this.conn;
-    if (this.o.dryRun || !conn || !this.ready || this.stopping || this.current !== null || this.joining) return;
+    if (
+      this.o.dryRun ||
+      !conn ||
+      !this.ready ||
+      this.stopping ||
+      this.current !== null ||
+      this.joining
+    )
+      return;
     // Tournament-only mode (DAMO_NO_LADDER): ladder matches publish our bids and words for rivals to model.
     // Tournament matches need no lobby: the server seats entrants directly.
     if (process.env.DAMO_NO_LADDER === "1") {
-      if (!this.stealthLogged) this.o.log.human("stealth: DAMO_NO_LADDER=1, not joining the ladder (tournaments only)");
+      if (!this.stealthLogged)
+        this.o.log.human("stealth: DAMO_NO_LADDER=1, not joining the ladder (tournaments only)");
       this.stealthLogged = true;
       return;
     }
     if (this.heldForTournament()) {
-      if (!this.heldLogged) this.o.log.human("Damo is in a tournament under way: waiting to be seated, not joining the lobby");
+      if (!this.heldLogged)
+        this.o.log.human(
+          "Damo is in a tournament under way: waiting to be seated, not joining the lobby",
+        );
       this.heldLogged = true;
       return;
     }
@@ -883,14 +1004,21 @@ export class Session {
     const p0 = performance.now();
     try {
       await conn.reducers.joinLobby({});
-      this.o.log.write("lobby", { action: "join", reason, ok: true, ackMs: Math.round(performance.now() - p0) });
+      this.o.log.write("lobby", {
+        action: "join",
+        reason,
+        ok: true,
+        ackMs: Math.round(performance.now() - p0),
+      });
       if (reason !== "watchdog") this.o.log.human(`in the lobby (${reason})`);
     } catch (e) {
       const err = errMsg(e);
       this.o.log.write("lobby", { action: "join", reason, ok: false, err });
       if (isTournamentHold(err)) {
         this.lobbyBackoffUntil = Date.now() + LOBBY_REFUSED_BACKOFF_MS;
-        this.o.log.human(`join_lobby refused (tournament under way): waiting to be seated; next try in ${LOBBY_REFUSED_BACKOFF_MS / 1000} s`);
+        this.o.log.human(
+          `join_lobby refused (tournament under way): waiting to be seated; next try in ${LOBBY_REFUSED_BACKOFF_MS / 1000} s`,
+        );
       } else this.o.log.human(`join_lobby refused: ${err}`);
       if (/running match/i.test(err)) this.refreshCurrent();
     } finally {
@@ -909,11 +1037,15 @@ export class Session {
     if (this.o.dryRun || this.stopping || !conn || !this.ready || me === null) return;
     const want = new Set<bigint>();
     if (this.o.tournamentId !== undefined) want.add(this.o.tournamentId);
-    if (this.o.autoTournament !== false) for (const id of toRegister(conn.db.tournament.iter(), conn.db.tournamentEntry.iter(), me)) want.add(id);
+    if (this.o.autoTournament !== false)
+      for (const id of toRegister(conn.db.tournament.iter(), conn.db.tournamentEntry.iter(), me))
+        want.add(id);
     const now = Date.now();
     for (const id of want) {
       const t = conn.db.tournament.id.find(id);
-      const entered = [...conn.db.tournamentEntry.teByBot.filter(me)].some((e) => e.tournamentId === id);
+      const entered = [...conn.db.tournamentEntry.teByBot.filter(me)].some(
+        (e) => e.tournamentId === id,
+      );
       let st = this.reg.get(id);
       if (entered) {
         if (st && !st.done) {
@@ -935,19 +1067,38 @@ export class Session {
     }
   }
 
-  private async registerTournament(conn: DbConnection, id: bigint, st: { attempts: number; nextAt: number; inFlight: boolean; done: boolean }) {
+  private async registerTournament(
+    conn: DbConnection,
+    id: bigint,
+    st: { attempts: number; nextAt: number; inFlight: boolean; done: boolean },
+  ) {
     st.inFlight = true;
     st.attempts++;
     try {
       await conn.reducers.registerForTournament({ tournamentId: id });
       st.done = true;
-      this.o.log.write("tournament", { action: "register", tournament: id, ok: true, attempt: st.attempts, auto: id !== this.o.tournamentId });
+      this.o.log.write("tournament", {
+        action: "register",
+        tournament: id,
+        ok: true,
+        attempt: st.attempts,
+        auto: id !== this.o.tournamentId,
+      });
       this.o.log.human(`!! REGISTERED Damo for tournament ${id} (attempt ${st.attempts})`);
     } catch (e) {
       const wait = registerBackoffMs(st.attempts);
       st.nextAt = Date.now() + wait;
-      this.o.log.write("tournament", { action: "register", tournament: id, ok: false, attempt: st.attempts, err: errMsg(e), retryMs: wait });
-      this.o.log.warn(`tournament ${id} registration refused (attempt ${st.attempts}): ${errMsg(e)}; retry in ${Math.round(wait / 1000)} s`);
+      this.o.log.write("tournament", {
+        action: "register",
+        tournament: id,
+        ok: false,
+        attempt: st.attempts,
+        err: errMsg(e),
+        retryMs: wait,
+      });
+      this.o.log.warn(
+        `tournament ${id} registration refused (attempt ${st.attempts}): ${errMsg(e)}; retry in ${Math.round(wait / 1000)} s`,
+      );
     } finally {
       st.inFlight = false;
     }
@@ -959,7 +1110,9 @@ export class Session {
     const me = this.botId;
     if (!conn || !this.ready || me === null) return;
     // Only tournaments in their final: older ones' games are history.
-    const inFinal = [...conn.db.tournamentEntry.teByBot.filter(me)].filter((e) => conn.db.tournament.id.find(e.tournamentId)?.status.tag === "Final");
+    const inFinal = [...conn.db.tournamentEntry.teByBot.filter(me)].filter(
+      (e) => conn.db.tournament.id.find(e.tournamentId)?.status.tag === "Final",
+    );
     for (const matchId of finalMatchIds(conn.db.tournamentMatch.iter(), inFinal, me)) {
       if (this.finalSeats.has(matchId)) continue;
       this.finalSeats.set(matchId, null);
@@ -984,10 +1137,20 @@ export class Session {
     void this.maybeJoinLobby("watchdog");
     if (this.conn && this.ready && now - this.lastTimingAt >= this.o.probeMs) {
       this.lastTimingAt = now;
-      void this.probe(this.conn).then(() => this.o.log.write("timing", { ...this.clock.snapshot(), current: this.current }));
+      void this.probe(this.conn).then(() =>
+        this.o.log.write("timing", { ...this.clock.snapshot(), current: this.current }),
+      );
     }
-    if (this.o.dryRun && this.o.idleExitMs && this.matchesEnded === 0 && this.current === null && now - this.startedAt > this.o.idleExitMs) {
-      this.o.log.warn(`dry run: no match to follow after ${Math.round(this.o.idleExitMs / 1000)} s`);
+    if (
+      this.o.dryRun &&
+      this.o.idleExitMs &&
+      this.matchesEnded === 0 &&
+      this.current === null &&
+      now - this.startedAt > this.o.idleExitMs
+    ) {
+      this.o.log.warn(
+        `dry run: no match to follow after ${Math.round(this.o.idleExitMs / 1000)} s`,
+      );
       void this.stop(2);
     }
   }
@@ -997,7 +1160,11 @@ export class Session {
     try {
       fn();
     } catch (e) {
-      this.o.log.write("error", { where, err: errMsg(e), stack: e instanceof Error ? e.stack?.split("\n").slice(0, 4).join(" | ") : undefined });
+      this.o.log.write("error", {
+        where,
+        err: errMsg(e),
+        stack: e instanceof Error ? e.stack?.split("\n").slice(0, 4).join(" | ") : undefined,
+      });
       this.o.log.warn(`${where}: ${errMsg(e)}`);
     }
   }
@@ -1047,22 +1214,50 @@ function pct(xs: number[], q: number): number | null {
 
 /** What a dry run measured, per auction record. */
 export function dryRunStats(recs: Record<string, unknown>[]) {
-  const num = (k: string) => recs.map((r) => r[k]).filter((x): x is number => typeof x === "number");
+  const num = (k: string) =>
+    recs.map((r) => r[k]).filter((x): x is number => typeof x === "number");
   const sends = recs.flatMap((r) => (r.sends as Array<{ stage: string; slackMs: number }>) ?? []);
   const slack = (stage: string) => sends.filter((s) => s.stage === stage).map((s) => s.slackMs);
   return {
     auctions: recs.length,
     fresh: recs.filter((r) => r.fresh).length,
     withResult: recs.filter((r) => r.result).length,
-    recvLagMs: { p10: pct(num("recvLagMs"), 0.1), p50: pct(num("recvLagMs"), 0.5), p90: pct(num("recvLagMs"), 0.9), max: pct(num("recvLagMs"), 1) },
-    quickMs: { p50: pct(num("quickMs"), 0.5), p99: pct(num("quickMs"), 0.99), max: pct(num("quickMs"), 1) },
-    refineMs: { n: num("refineMs").length, p50: pct(num("refineMs"), 0.5), p99: pct(num("refineMs"), 0.99), max: pct(num("refineMs"), 1) },
-    budgetMs: { p10: pct(num("budgetMs"), 0.1), p50: pct(num("budgetMs"), 0.5), min: pct(num("budgetMs"), 0) },
+    recvLagMs: {
+      p10: pct(num("recvLagMs"), 0.1),
+      p50: pct(num("recvLagMs"), 0.5),
+      p90: pct(num("recvLagMs"), 0.9),
+      max: pct(num("recvLagMs"), 1),
+    },
+    quickMs: {
+      p50: pct(num("quickMs"), 0.5),
+      p99: pct(num("quickMs"), 0.99),
+      max: pct(num("quickMs"), 1),
+    },
+    refineMs: {
+      n: num("refineMs").length,
+      p50: pct(num("refineMs"), 0.5),
+      p99: pct(num("refineMs"), 0.99),
+      max: pct(num("refineMs"), 1),
+    },
+    budgetMs: {
+      p10: pct(num("budgetMs"), 0.1),
+      p50: pct(num("budgetMs"), 0.5),
+      min: pct(num("budgetMs"), 0),
+    },
     quickSlackMs: { min: pct(slack("quick"), 0), p50: pct(slack("quick"), 0.5) },
-    refineSlackMs: { n: slack("refine").length, min: pct(slack("refine"), 0), p50: pct(slack("refine"), 0.5) },
+    refineSlackMs: {
+      n: slack("refine").length,
+      min: pct(slack("refine"), 0),
+      p50: pct(slack("refine"), 0.5),
+    },
     wouldMiss: sends.filter((s) => s.slackMs < 0).length,
     tickDelayMs: {
-      p50: pct(recs.map((r) => (r.result as { tickDelayMs?: number } | null)?.tickDelayMs).filter((x): x is number => typeof x === "number"), 0.5),
+      p50: pct(
+        recs
+          .map((r) => (r.result as { tickDelayMs?: number } | null)?.tickDelayMs)
+          .filter((x): x is number => typeof x === "number"),
+        0.5,
+      ),
     },
     refineSkips: recs.map((r) => r.refineSkip).filter(Boolean),
   };

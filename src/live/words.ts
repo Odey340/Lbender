@@ -134,7 +134,12 @@ export class WordPlayer {
     const thinkMs = Math.round((this.perf() - t0) * 10) / 10;
     for (const c of checkWords(words, view.myRack)) {
       if ("invalid" in c) {
-        this.d.log("word", { match: matchId, word: c.invalid, invalid: c.why, rack: rackString(view.myRack) });
+        this.d.log("word", {
+          match: matchId,
+          word: c.invalid,
+          invalid: c.why,
+          rack: rackString(view.myRack),
+        });
         continue;
       }
       const key = `${matchId}|${c.rackBefore}|${c.word}`;
@@ -144,7 +149,13 @@ export class WordPlayer {
     }
   }
 
-  private submit(matchId: bigint, word: string, rackBefore: string, thinkMs: number, round: number) {
+  private submit(
+    matchId: bigint,
+    word: string,
+    rackBefore: string,
+    thinkMs: number,
+    round: number,
+  ) {
     this.inFlight++;
     const letters = countsOf(word);
     for (let i = 0; i < 26; i++) this.inFlightCounts[i]! += letters[i]!;
@@ -161,21 +172,43 @@ export class WordPlayer {
     const timeout = new Promise<void>((_res, rej) => {
       timer = setTimeout(() => rej(new Error("no ack within 5 s")), 5000);
     });
-    Promise.race([p, timeout]).finally(() => clearTimeout(timer)).then(
-      () => ({ ok: true as const, err: undefined }),
-      (e) => ({ ok: false as const, err: errMsg(e) }),
-    ).then(({ ok, err }) => {
-      const p1 = this.perf();
-      const ackMs = Math.round((p1 - p0) * 10) / 10;
-      if (!this.d.transport.dry && (ok || !/connect/i.test(err ?? "")) && !this.d.busy?.overlaps(p0, p1)) {
-        this.d.clock?.observeRtt(p1 - p0);
-      }
-      const reward = ok ? wordReward(word) : 0;
-      this.d.log("word", { match: matchId, round, rackBefore, word, reward, thinkMs, sentAt, ackMs, ok, err, dryRun: this.d.transport.dry || undefined });
-      this.d.human(`m${matchId} word ${word} from ${rackBefore}: ${ok ? `+${reward}` : `REFUSED ${err}`} (${ackMs}ms)`);
-      for (let i = 0; i < 26; i++) this.inFlightCounts[i] = Math.max(0, this.inFlightCounts[i]! - letters[i]!);
-      this.settle();
-    });
+    Promise.race([p, timeout])
+      .finally(() => clearTimeout(timer))
+      .then(
+        () => ({ ok: true as const, err: undefined }),
+        (e) => ({ ok: false as const, err: errMsg(e) }),
+      )
+      .then(({ ok, err }) => {
+        const p1 = this.perf();
+        const ackMs = Math.round((p1 - p0) * 10) / 10;
+        if (
+          !this.d.transport.dry &&
+          (ok || !/connect/i.test(err ?? "")) &&
+          !this.d.busy?.overlaps(p0, p1)
+        ) {
+          this.d.clock?.observeRtt(p1 - p0);
+        }
+        const reward = ok ? wordReward(word) : 0;
+        this.d.log("word", {
+          match: matchId,
+          round,
+          rackBefore,
+          word,
+          reward,
+          thinkMs,
+          sentAt,
+          ackMs,
+          ok,
+          err,
+          dryRun: this.d.transport.dry || undefined,
+        });
+        this.d.human(
+          `m${matchId} word ${word} from ${rackBefore}: ${ok ? `+${reward}` : `REFUSED ${err}`} (${ackMs}ms)`,
+        );
+        for (let i = 0; i < 26; i++)
+          this.inFlightCounts[i] = Math.max(0, this.inFlightCounts[i]! - letters[i]!);
+        this.settle();
+      });
   }
 
   private settle() {

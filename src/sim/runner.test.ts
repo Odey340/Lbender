@@ -7,7 +7,15 @@ import * as path from "node:path";
 import { test } from "node:test";
 import { LETTERS } from "../core/rules.js";
 import { Engine } from "./engine.js";
-import { assignBotIds, importIfPresent, loadRegistry, parseSeatSpec, parseTable, SIM_POOL, SYNTHETIC_ID_BASE } from "./registry.js";
+import {
+  assignBotIds,
+  importIfPresent,
+  loadRegistry,
+  parseSeatSpec,
+  parseTable,
+  SIM_POOL,
+  SYNTHETIC_ID_BASE,
+} from "./registry.js";
 import { planGame, prepare, runMatches } from "./runner.js";
 import { aggregate, clusteredEstimate, placesAndWins } from "./stats.js";
 import { Rng, ServerRandom, deriveSeed, serverStartUs } from "./rng.js";
@@ -19,8 +27,14 @@ test("rng: same keys replay, different keys differ, int() covers its range evenl
   const b = new Rng(42, "bag");
   const c = new Rng(42, "ties");
   const xs = Array.from({ length: 50 }, () => a.nextU32());
-  assert.deepEqual(Array.from({ length: 50 }, () => b.nextU32()), xs);
-  assert.notDeepEqual(Array.from({ length: 50 }, () => c.nextU32()), xs);
+  assert.deepEqual(
+    Array.from({ length: 50 }, () => b.nextU32()),
+    xs,
+  );
+  assert.notDeepEqual(
+    Array.from({ length: 50 }, () => c.nextU32()),
+    xs,
+  );
   assert.notEqual(deriveSeed(1, 2), deriveSeed(2, 1));
   assert.notEqual(deriveSeed(2 ** 32), deriveSeed(0));
   const counts = new Array<number>(5).fill(0);
@@ -64,9 +78,22 @@ test("worker threads give the same records as one thread", async () => {
 });
 
 test("swap plays every deal in every rotation, on the same letters", async () => {
-  const ctx = await prepare({ table: "starter,sim:Aggressive,sim:Cheapskate", games: 0, swap: true, seed: 3 });
+  const ctx = await prepare({
+    table: "starter,sim:Aggressive,sim:Cheapskate",
+    games: 0,
+    swap: true,
+    seed: 3,
+  });
   const plans = [0, 1, 2, 3].map((g) => planGame(ctx, g));
-  assert.deepEqual(plans.map((p) => [p.deal, p.rotation]), [[0, 0], [0, 1], [0, 2], [1, 0]]);
+  assert.deepEqual(
+    plans.map((p) => [p.deal, p.rotation]),
+    [
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [1, 0],
+    ],
+  );
   assert.equal(plans[0]!.dealSeed, plans[2]!.dealSeed);
   assert.notEqual(plans[0]!.dealSeed, plans[3]!.dealSeed);
   // Each spec sits in each position once per deal.
@@ -76,11 +103,24 @@ test("swap plays every deal in every rotation, on the same letters", async () =>
   // Rotations share the letter sequence: same deal seed and, with no bids
   // here, the same draws (in server mode a close's tie shuffle comes first,
   // so letters can shift with the number of positive bids).
-  const r = await runMatches({ table: "starter,sim:Aggressive,sim:Cheapskate", games: 3, swap: true, seed: 3, keepRecords: true });
+  const r = await runMatches({
+    table: "starter,sim:Aggressive,sim:Cheapskate",
+    games: 3,
+    swap: true,
+    seed: 3,
+    keepRecords: true,
+  });
   assert.equal(r.games, 3);
   assert.equal(r.deals, 1);
   const letters = (seed: number) => {
-    const e = new Engine({ seed, seats: [{ botId: 1, isSim: false }, { botId: 2, isSim: false }, { botId: 3, isSim: false }] });
+    const e = new Engine({
+      seed,
+      seats: [
+        { botId: 1, isSim: false },
+        { botId: 2, isSim: false },
+        { botId: 3, isSim: false },
+      ],
+    });
     e.start();
     const out: string[] = [];
     while (e.status === "Running") {
@@ -91,7 +131,10 @@ test("swap plays every deal in every rotation, on the same letters", async () =>
   };
   assert.equal(letters(plans[0]!.dealSeed), letters(plans[1]!.dealSeed));
   // games rounds up to whole deals
-  assert.equal((await runMatches({ table: "starter,sim:Aggressive", games: 3, swap: true })).games, 4);
+  assert.equal(
+    (await runMatches({ table: "starter,sim:Aggressive", games: 3, swap: true })).games,
+    4,
+  );
 });
 
 test("pad fills the table from the server's sim pool, like a lobby timeout", async () => {
@@ -121,11 +164,18 @@ test("server rng: lobby padding shuffles the sim pool with the start transaction
     const plan = planGame(ctx, g);
     const pool = SIM_POOL.filter((s) => s.botId !== 3);
     new ServerRandom(serverStartUs(plan.dealSeed)).shuffle(pool);
-    assert.deepEqual(plan.seats.slice(2).map((s) => s.botId), pool.slice(0, 4).map((s) => s.botId));
+    assert.deepEqual(
+      plan.seats.slice(2).map((s) => s.botId),
+      pool.slice(0, 4).map((s) => s.botId),
+    );
     assert.equal(plan.lobbyShuffle, 5, "every available sim is shuffled, even those not taken");
   }
   // A full table never timed out: no padding, no shuffle.
-  const full = await prepare({ table: "starter,starter,starter,starter,starter,starter", games: 0, pad: true });
+  const full = await prepare({
+    table: "starter,starter,starter,starter,starter,starter",
+    games: 0,
+    pad: true,
+  });
   assert.equal(planGame(full, 0).lobbyShuffle, 0);
   const streams = await prepare({ table: "starter", games: 0, pad: true, rng: "streams" });
   assert.equal(planGame(streams, 0).lobbyShuffle, 0);
@@ -134,8 +184,32 @@ test("server rng: lobby padding shuffles the sim pool with the start transaction
 // First-auction letters of all 5,487 live matches mined by 2026-10-25
 // (auction_ctx round_idx 0). A fair draw gives D 4.1%; live it is 7.1%.
 const LIVE_FIRST_LETTER: Record<string, number> = {
-  A: 455, B: 87, C: 104, D: 388, E: 683, F: 119, G: 161, H: 101, I: 558, J: 94, K: 50, L: 188, M: 109,
-  N: 313, O: 388, P: 100, Q: 48, R: 305, S: 240, T: 320, U: 232, V: 106, W: 126, X: 60, Y: 95, Z: 57,
+  A: 455,
+  B: 87,
+  C: 104,
+  D: 388,
+  E: 683,
+  F: 119,
+  G: 161,
+  H: 101,
+  I: 558,
+  J: 94,
+  K: 50,
+  L: 188,
+  M: 109,
+  N: 313,
+  O: 388,
+  P: 100,
+  Q: 48,
+  R: 305,
+  S: 240,
+  T: 320,
+  U: 232,
+  V: 106,
+  W: 126,
+  X: 60,
+  Y: 95,
+  Z: 57,
 };
 
 test("server rng reproduces the live first-letter skew; fair streams don't", () => {
@@ -147,7 +221,11 @@ test("server rng reproduces the live first-letter skew; fair streams don't", () 
     const counts = new Array<number>(26).fill(0);
     const N = 30_000;
     for (let seed = 0; seed < N; seed++) {
-      const e = new Engine({ seed, rng, seats: Array.from({ length: 6 }, (_, i) => ({ botId: 101 + i, isSim: false })) });
+      const e = new Engine({
+        seed,
+        rng,
+        seats: Array.from({ length: 6 }, (_, i) => ({ botId: 101 + i, isSim: false })),
+      });
       e.start();
       counts[e.auction!.letter.charCodeAt(0) - 65]!++;
     }
@@ -165,7 +243,10 @@ test("server rng reproduces the live first-letter skew; fair streams don't", () 
 
 test("places share ties; wins split ties", () => {
   assert.deepEqual(placesAndWins([10, 30, 20]), { place: [3, 1, 2], winShare: [0, 1, 0] });
-  assert.deepEqual(placesAndWins([30, 30, 5, 5]), { place: [1.5, 1.5, 3.5, 3.5], winShare: [0.5, 0.5, 0, 0] });
+  assert.deepEqual(placesAndWins([30, 30, 5, 5]), {
+    place: [1.5, 1.5, 3.5, 3.5],
+    winShare: [0.5, 0.5, 0, 0],
+  });
   assert.deepEqual(placesAndWins([7, 7, 7]), { place: [2, 2, 2], winShare: [1 / 3, 1 / 3, 1 / 3] });
 });
 
@@ -180,7 +261,10 @@ test("clustered estimate: plain mean and standard error when clusters are single
 
 test("aggregate reports every requested metric per spec", async () => {
   const r = await runMatches({ table: TABLE, games: 10, seed: 1, keepRecords: true });
-  assert.deepEqual(r.stats.map((s) => s.spec), ["starter", "sim:Cheapskate", "sim:ValueBidder", "sim:Aggressive"]);
+  assert.deepEqual(
+    r.stats.map((s) => s.spec),
+    ["starter", "sim:Cheapskate", "sim:ValueBidder", "sim:Aggressive"],
+  );
   const starter = r.stats[0]!;
   assert.equal(starter.games, 20);
   assert.equal(starter.deals, 10);
@@ -197,12 +281,18 @@ test("aggregate reports every requested metric per spec", async () => {
 });
 
 test("seat specs parse, and bad ones explain themselves", () => {
-  assert.deepEqual(parseSeatSpec(" sim:aggressive "), { spec: "sim:Aggressive", kind: "sim", strategy: "Aggressive" });
+  assert.deepEqual(parseSeatSpec(" sim:aggressive "), {
+    spec: "sim:Aggressive",
+    kind: "sim",
+    strategy: "Aggressive",
+  });
   assert.deepEqual(parseSeatSpec("clone:42"), { spec: "clone:42", kind: "clone", cloneBotId: 42 });
   assert.deepEqual(parseSeatSpec("palace#b"), { spec: "palace#b", kind: "palace", variant: "b" });
   assert.throws(() => parseSeatSpec("sim:Greedy"), /unknown sim strategy/);
   assert.throws(() => parseSeatSpec("gpt"), /unknown seat spec 'gpt'/);
-  const ids = assignBotIds(parseTable("sim:Cheapskate,sim:Cheapskate,sim:Cheapskate,clone:77,clone:77,starter"));
+  const ids = assignBotIds(
+    parseTable("sim:Cheapskate,sim:Cheapskate,sim:Cheapskate,clone:77,clone:77,starter"),
+  );
   assert.deepEqual(
     ids.map((p) => p.botId),
     [1, 6, SYNTHETIC_ID_BASE, 77, SYNTHETIC_ID_BASE + 1, SYNTHETIC_ID_BASE + 2],
@@ -223,7 +313,10 @@ test("palace and clone seats load through the factory conventions, or say what's
   ] as const) {
     const specs = parseTable(spec);
     if (!fs.existsSync(path.join(src, file))) {
-      await assert.rejects(loadRegistry(specs, { model: false }), new RegExp(`src/${file}, which doesn't exist yet`));
+      await assert.rejects(
+        loadRegistry(specs, { model: false }),
+        new RegExp(`src/${file}, which doesn't exist yet`),
+      );
     } else {
       const reg = await loadRegistry(specs, { model: false });
       assert.equal(reg.create(specs[0]!, 1)?.name, name);
@@ -241,7 +334,8 @@ const LIVE_ALL_SIM = {
 
 test("all-sim tables reproduce live all-sim matches", async () => {
   const r = await runMatches({
-    table: "sim:Cheapskate,sim:ValueBidder,sim:Aggressive,sim:ValueBidder,sim:Aggressive,sim:Cheapskate",
+    table:
+      "sim:Cheapskate,sim:ValueBidder,sim:Aggressive,sim:ValueBidder,sim:Aggressive,sim:Cheapskate",
     games: 2000,
     seed: 2026,
   });
@@ -249,7 +343,13 @@ test("all-sim tables reproduce live all-sim matches", async () => {
     const live = LIVE_ALL_SIM[s.spec as keyof typeof LIVE_ALL_SIM];
     // Both have sampling error; allow the live interval plus ours.
     const tol = live.scoreCi + s.score.halfWidth;
-    assert.ok(Math.abs(s.score.mean - live.score) <= tol, `${s.spec}: sim ${s.score.mean.toFixed(2)} vs live ${live.score}`);
-    assert.ok(Math.abs(s.coinsLeft.mean - live.coins) <= 3, `${s.spec} coins: sim ${s.coinsLeft.mean.toFixed(1)} vs live ${live.coins}`);
+    assert.ok(
+      Math.abs(s.score.mean - live.score) <= tol,
+      `${s.spec}: sim ${s.score.mean.toFixed(2)} vs live ${live.score}`,
+    );
+    assert.ok(
+      Math.abs(s.coinsLeft.mean - live.coins) <= 3,
+      `${s.spec} coins: sim ${s.coinsLeft.mean.toFixed(1)} vs live ${live.coins}`,
+    );
   }
 });

@@ -30,15 +30,15 @@ If someone shared this folder and asked you to set it up, follow the steps below
 
 ## Useful commands
 
-| Command | What it does |
-|---|---|
-| `npm run setup` | Install, typecheck, test |
-| `npm run mine -- --no-backend` | Refresh match history and rival models |
-| `npm run bot` | Play (ladder + tournaments) |
-| `npm run bot -- --dry-run` | Watch a live match, no reducer calls |
-| `npm run status` | Rating, recent matches, misses, think times |
-| `npm test` | Offline unit tests |
-| `npx tsx src/brain/eval.ts --help` | Paired simulator evaluation |
+| Command                            | What it does                                |
+| ---------------------------------- | ------------------------------------------- |
+| `npm run setup`                    | Install, typecheck, test                    |
+| `npm run mine -- --no-backend`     | Refresh match history and rival models      |
+| `npm run bot`                      | Play (ladder + tournaments)                 |
+| `npm run bot -- --dry-run`         | Watch a live match, no reducer calls        |
+| `npm run status`                   | Rating, recent matches, misses, think times |
+| `npm test`                         | Offline unit tests                          |
+| `npx tsx src/brain/eval.ts --help` | Paired simulator evaluation                 |
 
 ## License
 

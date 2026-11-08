@@ -40,13 +40,25 @@ test("engine views carry the tournament context only when given one", () => {
 });
 
 test("heads-up and oversized tables deal 98 - seats x rack and run to the end", () => {
-  for (const [seats, rack] of [[2, 5], [11, 5], [11, 7], [3, 7]] as const) {
+  for (const [seats, rack] of [
+    [2, 5],
+    [11, 5],
+    [11, 7],
+    [3, 7],
+  ] as const) {
     const out = runMatch({
-      seats: Array.from({ length: seats }, (_, i) => ({ botId: 1_000_000 + i, isSim: false, agent: probe([]) })),
+      seats: Array.from({ length: seats }, (_, i) => ({
+        botId: 1_000_000 + i,
+        isSim: false,
+        agent: probe([]),
+      })),
       seed: 9,
       startingRackSize: rack,
     });
     assert.equal(out.rounds, 98 - seats * rack, `${seats} seats, rack ${rack}`);
-    assert.equal(out.seats.reduce((a, s) => a + s.agentErrors, 0), 0);
+    assert.equal(
+      out.seats.reduce((a, s) => a + s.agentErrors, 0),
+      0,
+    );
   }
 });

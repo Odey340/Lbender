@@ -25,7 +25,10 @@ const run = (label, cmd) => {
 
 // 1. Node 22.5+ (the bot uses the built-in node:sqlite).
 const [maj, min] = process.versions.node.split(".").map(Number);
-if (maj < 22 || (maj === 22 && min < 5)) fail(`Node ${process.versions.node} is too old: install Node 22.5 or newer (https://nodejs.org), then re-run.`);
+if (maj < 22 || (maj === 22 && min < 5))
+  fail(
+    `Node ${process.versions.node} is too old: install Node 22.5 or newer (https://nodejs.org), then re-run.`,
+  );
 ok(`Node ${process.versions.node}`);
 
 // 2. Dependencies, typecheck, tests.
@@ -34,7 +37,8 @@ run("typecheck", "npx tsc --noEmit -p .");
 if (!args.has("--quick")) run("offline tests", "npm test");
 
 // 3. Optional: opponent history (needs internet access to maincloud.spacetimedb.com).
-if (args.has("--mine")) run("download match history and fit rival models", "npm run mine -- --no-backend");
+if (args.has("--mine"))
+  run("download match history and fit rival models", "npm run mine -- --no-backend");
 
 const haveModel = existsSync("data/history.sqlite");
 const haveToken = [".token-damo"].some((f) => existsSync(f));

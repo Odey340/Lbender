@@ -11,7 +11,8 @@ test("rival weights sum to 1 and concentrate on the nearest rivals as the match 
   const rivals = [s(2, 62), s(3, 120), s(4, 10)];
   const early = placeView(me, rivals, 0.4, 1, P);
   const late = placeView(me, rivals, 0.4, 0.05, P);
-  for (const v of [early, late]) assert.ok(Math.abs(v.weights.reduce((a, b) => a + b, 0) - 1) < 1e-9);
+  for (const v of [early, late])
+    assert.ok(Math.abs(v.weights.reduce((a, b) => a + b, 0) - 1) < 1e-9);
   assert.ok(late.weights[0]! > 0.95, `nearest rival late: ${late.weights[0]}`);
   assert.ok(early.weights[0]! < late.weights[0]!);
   assert.ok(late.sigma < early.sigma);

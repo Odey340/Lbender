@@ -55,7 +55,10 @@ export interface Env {
 }
 
 /** Loads the opponent model and the clone factory, if present. */
-export async function loadEnv(variants: Record<string, Record<string, unknown>>, withModel = true): Promise<Env> {
+export async function loadEnv(
+  variants: Record<string, Record<string, unknown>>,
+  withModel = true,
+): Promise<Env> {
   const env: Env = { variants };
   getWordEngine();
   if (withModel) {
@@ -94,10 +97,18 @@ export function runJob(env: Env, job: Job): JobResult {
       case "starter":
         return { botId: s.botId, isSim: false, agent: new StarterAgent() };
       case "palace":
-        return { botId: s.botId, isSim: false, agent: createAgent({ mode: "sim", seed, model: env.model }) };
+        return {
+          botId: s.botId,
+          isSim: false,
+          agent: createAgent({ mode: "sim", seed, model: env.model }),
+        };
       case "clone": {
         if (!env.createClone) throw new Error("clone seats need src/memory/clones.ts");
-        return { botId: s.botId, isSim: false, agent: env.createClone(s.botId, { seed, model: env.model }) };
+        return {
+          botId: s.botId,
+          isSim: false,
+          agent: env.createClone(s.botId, { seed, model: env.model }),
+        };
       }
       case "test":
         return { botId: s.botId, isSim: false, agent: makeAgent(env, job, seed) };

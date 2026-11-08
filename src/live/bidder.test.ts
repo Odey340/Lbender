@@ -37,7 +37,12 @@ interface Harness {
 
 function harness(
   agent: Partial<Agent> & Pick<Agent, "quickBid">,
-  opts: { balance?: number; refuse?: (amount: number) => string | null; bidder?: Partial<BidderOptions>; seated?: boolean } = {},
+  opts: {
+    balance?: number;
+    refuse?: (amount: number) => string | null;
+    bidder?: Partial<BidderOptions>;
+    seated?: boolean;
+  } = {},
 ): Harness {
   let now = 1_000_000;
   const sent: Harness["sent"] = [];
@@ -82,11 +87,30 @@ function harness(
 }
 
 function auction(id: bigint, opensAt: number, letter = "Q"): AuctionRow {
-  return { id, matchId: 7n, letter, opensAt: ts(opensAt), closesAt: ts(opensAt + 1000), status: { tag: "Open" } };
+  return {
+    id,
+    matchId: 7n,
+    letter,
+    opensAt: ts(opensAt),
+    closesAt: ts(opensAt + 1000),
+    status: { tag: "Open" },
+  };
 }
 
-function result(id: bigint, closedAt: number, winner: bigint | undefined, paid: number): AuctionResultRow {
-  return { auctionId: id, matchId: 7n, letter: "Q", winnerBotId: winner, paid: BigInt(paid), closedAt: ts(closedAt) };
+function result(
+  id: bigint,
+  closedAt: number,
+  winner: bigint | undefined,
+  paid: number,
+): AuctionResultRow {
+  return {
+    auctionId: id,
+    matchId: 7n,
+    letter: "Q",
+    winnerBotId: winner,
+    paid: BigInt(paid),
+    closedAt: ts(closedAt),
+  };
 }
 
 test("bidder: quick bid goes out at once; an equal refinement isn't resent", async () => {
@@ -177,7 +201,10 @@ test("bidder: bids are sanitized; agent errors never escape", async () => {
 });
 
 test("bidder: a refused refinement leaves the quick bid standing and counts as a miss", async () => {
-  const h = harness({ quickBid: () => 6, refineBid: () => 8 }, { refuse: (a) => (a === 8 ? "Auction window expired" : null) });
+  const h = harness(
+    { quickBid: () => 6, refineBid: () => 8 },
+    { refuse: (a) => (a === 8 ? "Auction window expired" : null) },
+  );
   h.bidder.onOpen(auction(30n, 1_000_000 - 90), 1_000_000, true);
   await tick();
   h.bidder.onResult(result(30n, 1_000_000 + 910, 42n, 4), 1_000_000 + 1000, true);
@@ -220,7 +247,10 @@ test("bidder: a win above everything we bid flags another copy of the bot, once 
   await tick();
   const twins = h.logs.filter((l) => l.type === "twin");
   assert.equal(twins.length, 1, "warned once for the match");
-  assert.deepEqual({ paid: twins[0]!.rec.paid, maxSent: twins[0]!.rec.maxSent }, { paid: 18, maxSent: 4 });
+  assert.deepEqual(
+    { paid: twins[0]!.rec.paid, maxSent: twins[0]!.rec.maxSent },
+    { paid: 18, maxSent: 4 },
+  );
 });
 
 test("bidder: a normal Vickrey win (paid <= our bid) is not flagged", async () => {

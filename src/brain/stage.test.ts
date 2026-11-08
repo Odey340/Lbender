@@ -30,12 +30,17 @@ const tour = (ids: number[], phase: TournamentView["phase"]): TournamentView => 
   standings: ids.map((botId) => ({ botId, swissPoints: 0, totalScore: 0, eliminated: false })),
 });
 
-const outcome = (o: ReturnType<typeof runMatch>) => o.seats.map((s) => [s.score, s.balance, s.tilesLeft]);
+const outcome = (o: ReturnType<typeof runMatch>) =>
+  o.seats.map((s) => [s.score, s.balance, s.tilesLeft]);
 
 test("ladder match (6 seats, no view.tournament): stageAware and lambdaScaleBig change nothing", () => {
   const seed = 7;
   const base = runMatch({ seats: table({}, seed), seed, strict: true });
-  const flags = runMatch({ seats: table({ stageAware: 1, lambdaScaleBig: 0.8 }, seed), seed, strict: true });
+  const flags = runMatch({
+    seats: table({ stageAware: 1, lambdaScaleBig: 0.8 }, seed),
+    seed,
+    strict: true,
+  });
   assert.deepEqual(outcome(flags), outcome(base));
 });
 
@@ -43,7 +48,15 @@ test("tournament stages with stageAware: every move legal, no errors", () => {
   for (const phase of ["Swiss", "Bracket"] as const) {
     const seed = 11;
     const seats = table({ stageAware: 1 }, seed);
-    const out = runMatch({ seats, seed, strict: true, tournament: tour(seats.map((s) => s.botId), phase) });
+    const out = runMatch({
+      seats,
+      seed,
+      strict: true,
+      tournament: tour(
+        seats.map((s) => s.botId),
+        phase,
+      ),
+    });
     for (const s of out.seats.filter((x) => !x.isSim)) {
       assert.equal(s.bidRejections, 0);
       assert.equal(s.wordRejections, 0);
@@ -53,7 +66,12 @@ test("tournament stages with stageAware: every move legal, no errors", () => {
 });
 
 function bigView(seats: number): MatchView {
-  const participants = Array.from({ length: seats }, (_, i) => ({ botId: 100 + i, balance: 100, score: 0, isSim: false }));
+  const participants = Array.from({ length: seats }, (_, i) => ({
+    botId: 100 + i,
+    balance: 100,
+    score: 0,
+    isSim: false,
+  }));
   return {
     matchId: 9,
     myBotId: 100,
@@ -71,7 +89,11 @@ function bigView(seats: number): MatchView {
 const auction: AuctionView = { auctionId: 3, letter: "E", opensAtMs: 0, closesAtMs: 1000 };
 
 function lambdaAt(seats: number, params: Record<string, unknown>): number {
-  const a = createAgent({ mode: "sim", seed: 3, params: { useModel: false, ...params } }) as PalaceAgent;
+  const a = createAgent({
+    mode: "sim",
+    seed: 3,
+    params: { useModel: false, ...params },
+  }) as PalaceAgent;
   a.quickBid(bigView(seats), auction);
   return a.lastTrace!.lambda;
 }

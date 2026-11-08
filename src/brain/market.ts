@@ -43,7 +43,11 @@ export function simPmf(kind: SimKind, letter: string, balance: number, len: numb
   const i = idx(letter);
   const value = LETTER_VALUES[i] ?? 0;
   const base =
-    kind === "Cheapskate" ? value - 1 : kind === "ValueBidder" ? value : value + ("AEIOU".includes(letter) ? 4 : 2);
+    kind === "Cheapskate"
+      ? value - 1
+      : kind === "ValueBidder"
+        ? value
+        : value + ("AEIOU".includes(letter) ? 4 : 2);
   const n = 2 * SIM_BID_JITTER + 1;
   for (let j = -SIM_BID_JITTER; j <= SIM_BID_JITTER; j++) {
     const b = Math.max(Math.min(Math.max(base + j, 1), cap), 0);
@@ -68,7 +72,8 @@ export function genericPmf(p: Params, letter: string, balance: number, len: numb
   }
   // Everything the normal puts above the balance lands on the balance.
   let above = 0;
-  for (let x = cap + 1; x <= cap + 4 * sd + mean; x++) above += Math.exp(-0.5 * ((x - mean) / sd) ** 2);
+  for (let x = cap + 1; x <= cap + 4 * sd + mean; x++)
+    above += Math.exp(-0.5 * ((x - mean) / sd) ** 2);
   tot += above;
   if (tot <= 0) {
     pmf[0] = 1;
@@ -198,7 +203,13 @@ export class Market {
   }
 
   /** Remembers what I expected of an auction, to learn from its result. */
-  expect(auctionId: number, letter: string, myBid: number, cdfs: readonly Float64Array[], len: number): void {
+  expect(
+    auctionId: number,
+    letter: string,
+    myBid: number,
+    cdfs: readonly Float64Array[],
+    len: number,
+  ): void {
     if (this.p.calibRate <= 0) return;
     this.pending.set(auctionId, {
       letter,
@@ -219,7 +230,13 @@ export class Market {
    * predicted distribution (mid-PIT). Calibrated predictions average 0.5;
    * prices persistently in the upper tail scale real bots' bids up.
    */
-  observe(auctionId: number, winner: number | null, paid: number, myBotId: number, firstPrice: boolean): void {
+  observe(
+    auctionId: number,
+    winner: number | null,
+    paid: number,
+    myBotId: number,
+    firstPrice: boolean,
+  ): void {
     const e = this.pending.get(auctionId);
     if (!e) return;
     this.pending.delete(auctionId);
@@ -236,7 +253,11 @@ export class Market {
       if (!firstPrice) u = paid <= 1 ? e.max[Math.min(1, e.max.length - 1)]! / 2 : pit(e.max, paid);
     } else if (e.myBid < paid) {
       // I was outside the top two: the price is the competitors' own.
-      u = firstPrice ? pit(e.max, paid) : paid <= 1 ? e.second[Math.min(1, e.second.length - 1)]! / 2 : pit(e.second, paid);
+      u = firstPrice
+        ? pit(e.max, paid)
+        : paid <= 1
+          ? e.second[Math.min(1, e.second.length - 1)]! / 2
+          : pit(e.second, paid);
     }
     if (u === undefined || !Number.isFinite(u)) return;
     this.observed++;

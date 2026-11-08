@@ -23,7 +23,8 @@ import {
 
 type Rec = Record<string, unknown>;
 
-const n = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+const n = (v: unknown): number | undefined =>
+  typeof v === "number" && Number.isFinite(v) ? v : undefined;
 const id = (v: unknown): bigint | undefined => {
   const x = typeof v === "bigint" ? Number(v) : n(v);
   return x !== undefined && Number.isSafeInteger(x) && x >= 0 ? BigInt(x) : undefined;
@@ -42,7 +43,12 @@ export function decisionFrom(r: Rec): DecisionLog | undefined {
   const last = okSends.at(-1);
   const slacks = sends.map((s) => n(s.slackMs)).filter((x): x is number => x !== undefined);
   const res = (r.result ?? undefined) as Rec | undefined;
-  const reason = typeof r.reason === "string" ? r.reason : sends.length === 0 ? "no-bid" : String(last?.stage ?? "sent");
+  const reason =
+    typeof r.reason === "string"
+      ? r.reason
+      : sends.length === 0
+        ? "no-bid"
+        : String(last?.stage ?? "sent");
   return {
     auctionId,
     matchId,
@@ -205,7 +211,10 @@ export class Telemetry {
 
   /** Flushes the event queue (best effort, bounded) and disconnects. */
   async close(timeoutMs = 3_000): Promise<void> {
-    await Promise.race([this.sink.close().catch(() => {}), new Promise((r) => setTimeout(r, timeoutMs))]);
+    await Promise.race([
+      this.sink.close().catch(() => {}),
+      new Promise((r) => setTimeout(r, timeoutMs)),
+    ]);
   }
 }
 

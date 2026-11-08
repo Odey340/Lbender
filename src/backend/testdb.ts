@@ -27,7 +27,9 @@ export const INTEGRATION = process.env.DAMO_IT === "1";
 export async function serverUp(): Promise<boolean> {
   if (!INTEGRATION) return false;
   try {
-    const res = await fetch("http://127.0.0.1:3013/v1/ping", { signal: AbortSignal.timeout(2_000) });
+    const res = await fetch("http://127.0.0.1:3013/v1/ping", {
+      signal: AbortSignal.timeout(2_000),
+    });
     return res.ok && readWriterToken() !== undefined;
   } catch {
     return false;

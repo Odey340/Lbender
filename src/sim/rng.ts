@@ -157,7 +157,8 @@ export class ServerRandom {
   /** ctx.random.integerInRange(min, max): pure-rand's unsafeUniformIntDistribution. Always draws. */
   int(min: number, max: number): number {
     const rangeSize = max - min + 1;
-    const maxAllowed = rangeSize > 2 ? Math.floor(0x100000000 / rangeSize) * rangeSize : 0x100000000;
+    const maxAllowed =
+      rangeSize > 2 ? Math.floor(0x100000000 / rangeSize) * rangeSize : 0x100000000;
     let deltaV = this.unsafeNext() + 0x80000000;
     while (deltaV >= maxAllowed) deltaV = this.unsafeNext() + 0x80000000;
     return (deltaV % rangeSize) + min;

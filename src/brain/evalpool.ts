@@ -24,7 +24,8 @@ function workerArgv(): string[] {
   return ["--import", loader];
 }
 
-type FromWorker = { type: "ready" } | { type: "done"; results: JobResult[] } | { type: "error"; message: string };
+type FromWorker =
+  { type: "ready" } | { type: "done"; results: JobResult[] } | { type: "error"; message: string };
 
 export class EvalPool {
   private workers: Worker[] = [];

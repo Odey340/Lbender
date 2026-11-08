@@ -27,7 +27,12 @@
 // public tournament, tournament_entry, tournament_match and
 // match_participant tables (src/module_bindings shapes).
 
-import type { MatchView, TournamentStage, TournamentStanding, TournamentView } from "../core/types.js";
+import type {
+  MatchView,
+  TournamentStage,
+  TournamentStanding,
+  TournamentView,
+} from "../core/types.js";
 import type { Params } from "./params.js";
 import { equity, placeView, type PlaceView, type Standing } from "./place.js";
 
@@ -88,14 +93,19 @@ export interface TournamentRows {
 }
 
 const num = (x: Id): number => Number(x);
-const isStage = (s: string): s is TournamentStage => s === "Swiss" || s === "Bracket" || s === "Final";
+const isStage = (s: string): s is TournamentStage =>
+  s === "Swiss" || s === "Bracket" || s === "Final";
 
 /**
  * MatchView.tournament for match `matchId`, or undefined when the match is
  * not a tournament match (a ladder game) or the rows are incomplete.
  * Pure; never throws on odd rows.
  */
-export function tournamentContext(matchId: Id, myBotId: Id, rows: TournamentRows): TournamentView | undefined {
+export function tournamentContext(
+  matchId: Id,
+  myBotId: Id,
+  rows: TournamentRows,
+): TournamentView | undefined {
   const mid = num(matchId);
   const me = num(myBotId);
   const tms = [...rows.matches];
@@ -112,7 +122,9 @@ export function tournamentContext(matchId: Id, myBotId: Id, rows: TournamentRows
       totalScore: num(e.totalScore),
       eliminated: e.eliminated,
     }))
-    .sort((a, b) => b.swissPoints - a.swissPoints || b.totalScore - a.totalScore || a.botId - b.botId);
+    .sort(
+      (a, b) => b.swissPoints - a.swissPoints || b.totalScore - a.totalScore || a.botId - b.botId,
+    );
   const view: TournamentView = {
     phase: tm.phase.tag,
     round: tm.round,
@@ -124,11 +136,18 @@ export function tournamentContext(matchId: Id, myBotId: Id, rows: TournamentRows
   if (tm.phase.tag === "Final") {
     const parts = [...rows.participants];
     const here = parts.filter((p) => num(p.matchId) === mid).map((p) => num(p.botId));
-    const seated = here.length > 0 ? here : standings.filter((s) => !s.eliminated).map((s) => s.botId);
+    const seated =
+      here.length > 0 ? here : standings.filter((s) => !s.eliminated).map((s) => s.botId);
     if (!seated.includes(me)) seated.push(me);
     const earlier = new Set(
       tms
-        .filter((m) => num(m.tournamentId) === tid && m.phase.tag === "Final" && num(m.matchId) !== mid && m.round < tm.round)
+        .filter(
+          (m) =>
+            num(m.tournamentId) === tid &&
+            m.phase.tag === "Final" &&
+            num(m.matchId) !== mid &&
+            m.round < tm.round,
+        )
         .map((m) => num(m.matchId)),
     );
     view.finalTotals = seated.map((botId) => ({
@@ -149,7 +168,11 @@ const phi = (z: number) => Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
 export function normCdf(z: number): number {
   const x = Math.abs(z) / Math.SQRT2;
   const t = 1 / (1 + 0.3275911 * x);
-  const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  const y =
+    1 -
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) *
+      t *
+      Math.exp(-x * x);
   return z >= 0 ? 0.5 * (1 + y) : 0.5 * (1 - y);
 }
 
@@ -167,7 +190,13 @@ interface Gap {
   q: number;
 }
 
-function gaps(mine: number, rivals: readonly Standing[], lambda: number, sigma: number, p: Params): Gap[] {
+function gaps(
+  mine: number,
+  rivals: readonly Standing[],
+  lambda: number,
+  sigma: number,
+  p: Params,
+): Gap[] {
   return rivals.map((r) => {
     const z = (mine - equity(r, lambda, p)) / sigma;
     return { z, f: phi(z) / sigma, q: normCdf(-z) };
@@ -234,7 +263,14 @@ export function swissView(
 }
 
 /** Bracket: P(not last). */
-export function bracketView(me: Standing, rivals: readonly Standing[], lambda: number, remaining: number, p: Params, opts: StageOptions = {}): PlaceView {
+export function bracketView(
+  me: Standing,
+  rivals: readonly Standing[],
+  lambda: number,
+  remaining: number,
+  p: Params,
+  opts: StageOptions = {},
+): PlaceView {
   const sigma = sigmaFor(remaining, 0, p);
   const g = gaps(equity(me, lambda, p), rivals, lambda, sigma, p);
   // prod_{k != o} q_k: everyone else is already ahead, so o decides.
@@ -246,7 +282,7 @@ export function bracketView(me: Standing, rivals: readonly Standing[], lambda: n
   const mine =
     val.reduce((a, b) => a + b, 0) +
     (opts.scoreTiebreak ?? DEFAULT_SCORE_TIEBREAK) * pLast +
-    BRACKET_SAFE_FLOOR * phi(0) / sigma;
+    (BRACKET_SAFE_FLOOR * phi(0)) / sigma;
   const weights = mine > 0 ? val.map((v) => v / mine) : val.map(() => 0);
   return { weights, tilt: tiltOf(g, val), sigma };
 }
@@ -256,7 +292,15 @@ export function bracketView(me: Standing, rivals: readonly Standing[], lambda: n
  * over the earlier games; `gamesAfter` = games still to play after this one.
  * Heads-up and zero-sum, so the opponent's points weigh 1 against mine.
  */
-export function finalView(me: Standing, rivals: readonly Standing[], lambda: number, remaining: number, lead: number, gamesAfter: number, p: Params): PlaceView {
+export function finalView(
+  me: Standing,
+  rivals: readonly Standing[],
+  lambda: number,
+  remaining: number,
+  lead: number,
+  gamesAfter: number,
+  p: Params,
+): PlaceView {
   const sigma = sigmaFor(remaining, gamesAfter, p);
   const shifted: Standing = { ...me, score: me.score + lead };
   const g = gaps(equity(shifted, lambda, p), rivals, lambda, sigma, p);
@@ -294,10 +338,15 @@ export function stageView(
 }
 
 /** My running lead over the opponent from the earlier final games, and the games left after this one. */
-export function finalSeries(t: TournamentView, myBotId: number): { lead: number; gamesAfter: number } {
+export function finalSeries(
+  t: TournamentView,
+  myBotId: number,
+): { lead: number; gamesAfter: number } {
   const totals = t.finalTotals ?? [];
   const mine = totals.find((x) => x.botId === myBotId)?.total ?? 0;
-  const theirs = totals.filter((x) => x.botId !== myBotId).reduce((m, x) => Math.max(m, x.total), Number.NEGATIVE_INFINITY);
+  const theirs = totals
+    .filter((x) => x.botId !== myBotId)
+    .reduce((m, x) => Math.max(m, x.total), Number.NEGATIVE_INFINITY);
   const lead = Number.isFinite(theirs) ? mine - theirs : 0;
   const round = Math.max(1, Math.min(FINAL_GAMES, t.round));
   return { lead, gamesAfter: FINAL_GAMES - round };
@@ -311,10 +360,17 @@ export function stageWeights(
   p: Params,
   rackSizes: ReadonlyMap<number, number> = new Map(),
 ): { rivalIds: number[]; rivalWeights: number[]; tilt: number } {
-  const st = (botId: number, score: number, balance: number): Standing => ({ botId, score, balance, rackSize: rackSizes.get(botId) ?? 0 });
+  const st = (botId: number, score: number, balance: number): Standing => ({
+    botId,
+    score,
+    balance,
+    rackSize: rackSizes.get(botId) ?? 0,
+  });
   const meP = view.participants.find((x) => x.botId === view.myBotId);
   const me = st(view.myBotId, meP?.score ?? 0, meP?.balance ?? 0);
-  const rivals = view.participants.filter((x) => x.botId !== view.myBotId).map((x) => st(x.botId, x.score, x.balance));
+  const rivals = view.participants
+    .filter((x) => x.botId !== view.myBotId)
+    .map((x) => st(x.botId, x.score, x.balance));
   const pv = stageView(view, me, rivals, lambda, remaining, p);
   return { rivalIds: rivals.map((r) => r.botId), rivalWeights: pv.weights, tilt: pv.tilt };
 }

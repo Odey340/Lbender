@@ -30,22 +30,35 @@ test("blind dump: only in the endgame, judged on the estimated bag", () => {
   assert.equal(estimatedBag(12, 2500, 1000), 10);
   assert.equal(estimatedBag(3, 9000, 1000), 0);
   assert.ok(blindDumpDue(12_100, 10_000, 1000, 5, cfg), "bag 5, 2.1 s silent");
-  assert.ok(!blindDumpDue(12_100, 10_000, 1000, 30, cfg), "mid-match stall: leave it to the watchdog");
+  assert.ok(
+    !blindDumpDue(12_100, 10_000, 1000, 30, cfg),
+    "mid-match stall: leave it to the watchdog",
+  );
   // A stall that starts at bag 10 still triggers once the estimate drops to 8.
   assert.ok(!blindDumpDue(12_100, 10_000, 1000, 11, cfg));
   assert.ok(blindDumpDue(12_100, 10_000, 1000, 10, cfg));
   assert.ok(blindDumpDue(14_100, 10_000, 1000, 12, cfg), "4 s silent from bag 12: estimate 8");
-  assert.ok(!blindDumpDue(12_100, 10_000, 1000, 5, { ...cfg, enabled: false }), "DAMO_BLIND_DUMP=0");
+  assert.ok(
+    !blindDumpDue(12_100, 10_000, 1000, 5, { ...cfg, enabled: false }),
+    "DAMO_BLIND_DUMP=0",
+  );
 });
 
 test("blind dump: env config", () => {
   assert.deepEqual(blindDumpConfig({}), { enabled: true, silenceMs: 0, maxBag: 8 });
-  assert.deepEqual(blindDumpConfig({ DAMO_BLIND_DUMP: "0", DAMO_BLIND_DUMP_MS: "2500", DAMO_BLIND_DUMP_BAG: "6" }), {
-    enabled: false,
-    silenceMs: 2500,
-    maxBag: 6,
+  assert.deepEqual(
+    blindDumpConfig({ DAMO_BLIND_DUMP: "0", DAMO_BLIND_DUMP_MS: "2500", DAMO_BLIND_DUMP_BAG: "6" }),
+    {
+      enabled: false,
+      silenceMs: 2500,
+      maxBag: 6,
+    },
+  );
+  assert.deepEqual(blindDumpConfig({ DAMO_BLIND_DUMP_MS: "x", DAMO_BLIND_DUMP_BAG: "-3" }), {
+    enabled: true,
+    silenceMs: 0,
+    maxBag: 0,
   });
-  assert.deepEqual(blindDumpConfig({ DAMO_BLIND_DUMP_MS: "x", DAMO_BLIND_DUMP_BAG: "-3" }), { enabled: true, silenceMs: 0, maxBag: 0 });
 });
 
 test("blind dump: letters of unacknowledged words are not reused", () => {

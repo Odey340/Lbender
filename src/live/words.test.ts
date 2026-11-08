@@ -68,7 +68,11 @@ test("words: a check during in-flight words waits for their acks", async () => {
   const sent: string[] = [];
   const pending: Array<() => void> = [];
   const wp = new WordPlayer({
-    agent: { name: "t", quickBid: () => 0, chooseWords: (v) => (v.myRack[2]! > 0 ? ["CAT", "DOG"] : ["DOG"]) },
+    agent: {
+      name: "t",
+      quickBid: () => 0,
+      chooseWords: (v) => (v.myRack[2]! > 0 ? ["CAT", "DOG"] : ["DOG"]),
+    },
     transport: {
       dry: false,
       submitWord: (_m, w) => {
@@ -145,5 +149,9 @@ test("words: the blind dump goes out while an earlier word is unacknowledged, wi
   assert.deepEqual(sent, ["CAT", "DOGS"]);
   release?.();
   await tick();
-  assert.equal(wp.inFlightLetters.reduce((a, b) => a + b, 0), 0, "letters released on ack");
+  assert.equal(
+    wp.inFlightLetters.reduce((a, b) => a + b, 0),
+    0,
+    "letters released on ack",
+  );
 });

@@ -39,7 +39,9 @@ export function buildReport(dbPath: string = DEFAULT_DB_PATH): string {
   const out: string[] = [];
   const f = (x: number, d = 1) => (Number.isFinite(x) ? x.toFixed(d) : "-");
   try {
-    const span = db.prepare("SELECT COUNT(*) AS n, MIN(ended_us) AS a, MAX(ended_us) AS b FROM match_info").get()!;
+    const span = db
+      .prepare("SELECT COUNT(*) AS n, MIN(ended_us) AS a, MAX(ended_us) AS b FROM match_info")
+      .get()!;
     const asOf = num(span.b);
     const count = (t: string) => num(db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get()?.n);
     let size = 0;
@@ -115,7 +117,9 @@ export function buildReport(dbPath: string = DEFAULT_DB_PATH): string {
         unsold += m.pUnsold * m.n;
         n += m.n;
       }
-      out.push(`| ${L} | ${LETTER_VALUES[i]} | ${cells.join(" | ")} | ${f(n ? (100 * unsold) / n : 0)} |`);
+      out.push(
+        `| ${L} | ${LETTER_VALUES[i]} | ${cells.join(" | ")} | ${f(n ? (100 * unsold) / n : 0)} |`,
+      );
     }
     out.push("");
 
@@ -145,14 +149,20 @@ export function buildReport(dbPath: string = DEFAULT_DB_PATH): string {
     );
     const comp = (fromUs: number) =>
       db
-        .prepare("SELECT n_real, COUNT(*) AS n FROM match_info WHERE ended_us > ? GROUP BY n_real ORDER BY n_real")
+        .prepare(
+          "SELECT n_real, COUNT(*) AS n FROM match_info WHERE ended_us > ? GROUP BY n_real ORDER BY n_real",
+        )
         .all(fromUs)
         .map((r) => ({ real: num(r.n_real), n: num(r.n) }));
     const fmtComp = (rows: { real: number; n: number }[]) => {
       const tot = rows.reduce((s, r) => s + r.n, 0);
-      return rows.map((r) => `${r.real} real: ${r.n} (${f((100 * r.n) / Math.max(1, tot), 0)}%)`).join(", ");
+      return rows
+        .map((r) => `${r.real} real: ${r.n} (${f((100 * r.n) / Math.max(1, tot), 0)}%)`)
+        .join(", ");
     };
-    const perHour = num(q("SELECT COUNT(*) AS n FROM match_info WHERE ended_us > ?", asOf - 3600e6)?.n);
+    const perHour = num(
+      q("SELECT COUNT(*) AS n FROM match_info WHERE ended_us > ?", asOf - 3600e6)?.n,
+    );
     out.push(
       "## Table composition",
       "",

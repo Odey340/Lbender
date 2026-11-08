@@ -10,20 +10,61 @@ import { connectTestWriter, deleteTestDb, publishTestDb, serverUp, TEST_DB } fro
 
 // Shapes as the live bot logs them (logs/decisions-*.jsonl).
 const AUCTION = {
-  match: 14551, auction: 773421, letter: "D",
-  view: { match: 14551, round: 1, bagTotal: 67, balance: 100, score: 0, rack: "EGLRY", seats: [], events: 0 },
-  quick: 10, quickMs: 16.3, refined: 12, refineMs: 185.9, budgetMs: 405.2,
+  match: 14551,
+  auction: 773421,
+  letter: "D",
+  view: {
+    match: 14551,
+    round: 1,
+    bagTotal: 67,
+    balance: 100,
+    score: 0,
+    rack: "EGLRY",
+    seats: [],
+    events: 0,
+  },
+  quick: 10,
+  quickMs: 16.3,
+  refined: 12,
+  refineMs: 185.9,
+  budgetMs: 405.2,
   sends: [
     { stage: "quick", amount: 10, sentAt: 1, slackMs: 666.2, ok: true, ackMs: 198 },
     { stage: "refine", amount: 12, sentAt: 2, slackMs: 468.2, ok: true, ackMs: 123.3 },
   ],
-  standing: 12, misses: 0, result: { winner: 129, paid: 16, won: false, tickDelayMs: 2 },
+  standing: 12,
+  misses: 0,
+  result: { winner: 129, paid: 16, won: false, tickDelayMs: 2 },
 };
-const WORD = { match: 14541, round: 68, rackBefore: "AAEILRTVW", word: "AIRWAVE", reward: 39, thinkMs: 0.6, ackMs: 79.6, ok: true };
+const WORD = {
+  match: 14541,
+  round: 68,
+  rackBefore: "AAEILRTVW",
+  word: "AIRWAVE",
+  reward: 39,
+  thinkMs: 0.6,
+  ackMs: 79.6,
+  ok: true,
+};
 const END = {
-  match: 14541, me: 127, status: "Ended", place: 4, seats: 6, score: 87, balance: 51, coinsSpent: 136,
-  auctionsWon: 11, auctions: 68, words: ["JUNIPER", "AIRWAVE"], wordPoints: 87, unplayedTiles: 2,
-  standings: [{ botId: 74, score: 105, place: 1 }, { botId: 127, score: 87, place: 4 }], agent: "palace",
+  match: 14541,
+  me: 127,
+  status: "Ended",
+  place: 4,
+  seats: 6,
+  score: 87,
+  balance: 51,
+  coinsSpent: 136,
+  auctionsWon: 11,
+  auctions: 68,
+  words: ["JUNIPER", "AIRWAVE"],
+  wordPoints: 87,
+  unplayedTiles: 2,
+  standings: [
+    { botId: 74, score: 105, place: 1 },
+    { botId: 127, score: 87, place: 4 },
+  ],
+  agent: "palace",
 };
 
 describe("projections", () => {
@@ -70,7 +111,13 @@ describe("projections", () => {
 describe("no server", () => {
   test("record never throws, queue stays bounded, close returns", async () => {
     const errors: string[] = [];
-    const t = new Telemetry({ uri: "http://127.0.0.1:9", db: "nope", flushMs: 50, maxQueue: 100, onError: (m) => errors.push(m) });
+    const t = new Telemetry({
+      uri: "http://127.0.0.1:9",
+      db: "nope",
+      flushMs: 50,
+      maxQueue: 100,
+      onError: (m) => errors.push(m),
+    });
     const t0 = performance.now();
     for (let i = 0; i < 1_000; i++) t.record("auction", { ...AUCTION, auction: i });
     t.heartbeat({ state: "lobby", latencyMs: 1, clockOffsetMs: 0, version: "test" });
@@ -93,9 +140,17 @@ describe("attachTelemetry (no server)", () => {
     const warns: string[] = [];
     const log = { setTap: (t: Tap) => void (box.tap = t), warn: (m: string) => void warns.push(m) };
     let beats = 0;
-    const h = attachTelemetry(log, () => (beats++, { state: "lobby", latencyMs: 1, clockOffsetMs: 0, version: "test" }), {
-      uri: "http://127.0.0.1:9", db: "nope", flushMs: 50, maxQueue: 10, heartbeatMs: 20,
-    });
+    const h = attachTelemetry(
+      log,
+      () => (beats++, { state: "lobby", latencyMs: 1, clockOffsetMs: 0, version: "test" }),
+      {
+        uri: "http://127.0.0.1:9",
+        db: "nope",
+        flushMs: 50,
+        maxQueue: 10,
+        heartbeatMs: 20,
+      },
+    );
     assert.ok(h.telemetry);
     const tap = box.tap;
     assert.ok(tap);
@@ -128,7 +183,9 @@ describe("attachTelemetry (no server)", () => {
   });
 });
 
-const skip = (await serverUp()) ? false : "integration test: set DAMO_IT=1 with the local k13 server (127.0.0.1:3013) and a writer token";
+const skip = (await serverUp())
+  ? false
+  : "integration test: set DAMO_IT=1 with the local k13 server (127.0.0.1:3013) and a writer token";
 
 describe("round trip", { skip }, () => {
   let writer: Backend;
@@ -153,11 +210,20 @@ describe("round trip", { skip }, () => {
     t.record("auction", AUCTION);
     t.record("word", WORD);
     t.record("match_end", END);
-    t.heartbeat({ state: "match", currentMatch: 14541n, latencyMs: 80, clockOffsetMs: 99, version: "palace@test" });
+    t.heartbeat({
+      state: "match",
+      currentMatch: 14541n,
+      latencyMs: 80,
+      clockOffsetMs: 99,
+      version: "palace@test",
+    });
     let rt = -1;
     for (let i = 0; i < 100; i++) {
       const [d, w, m, s] = await Promise.all([
-        q("SELECT * FROM k13_decision"), q("SELECT * FROM k13_word"), q("SELECT * FROM k13_match"), q("SELECT * FROM k13_status"),
+        q("SELECT * FROM k13_decision"),
+        q("SELECT * FROM k13_word"),
+        q("SELECT * FROM k13_match"),
+        q("SELECT * FROM k13_status"),
       ]);
       if (d.length && w.length && m.length && s.length) {
         rt = performance.now() - t0;
@@ -172,7 +238,10 @@ describe("round trip", { skip }, () => {
     assert.ok(rt >= 0, "typed rows arrived");
     await t.close();
     const ev = await q("SELECT * FROM k13_event");
-    assert.deepEqual(new Set(ev.map((e) => e.type)), new Set(["start", "match_start", "auction", "word", "match_end"]));
+    assert.deepEqual(
+      new Set(ev.map((e) => e.type)),
+      new Set(["start", "match_start", "auction", "word", "match_end"]),
+    );
     const auction = ev.find((e) => e.type === "auction")!;
     assert.equal(Number(auction.auction_id), 773421);
     assert.deepEqual(JSON.parse(String(auction.json)), JSON.parse(JSON.stringify(AUCTION)));

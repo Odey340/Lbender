@@ -32,12 +32,21 @@ for (let g = 0; g < games; g++) {
   const seats: MatchSeat[] = specs.map((s, i) => {
     const botId = 100 + i;
     const sd = (seed * 31 + i * 7919) >>> 0;
-    if (s === "palace") return { botId, isSim: false, agent: createAgent({ mode: "sim", seed: sd, params, model: env.model }) };
+    if (s === "palace")
+      return {
+        botId,
+        isSim: false,
+        agent: createAgent({ mode: "sim", seed: sd, params, model: env.model }),
+      };
     const id = Number(s.split(":")[1]);
     return { botId: id, isSim: false, agent: env.createClone!(id, { seed: sd, model: env.model }) };
   });
   const testPos = g % (seats.length + 1);
-  seats.splice(testPos, 0, { botId: TEST, isSim: false, agent: createAgent({ mode: "sim", seed: seed ^ 0x5bd1e995, params, model: env.model }) });
+  seats.splice(testPos, 0, {
+    botId: TEST,
+    isSim: false,
+    agent: createAgent({ mode: "sim", seed: seed ^ 0x5bd1e995, params, model: env.model }),
+  });
   const out = runMatch({ seats, seed, matchId: g + 1 });
   const hist = out.engine.history as { kind: string; botId?: number; reward?: number }[];
   const auctions = hist.filter((e) => e.kind === "auction").length;
@@ -57,15 +66,25 @@ for (let g = 0; g < games; g++) {
     }
     atRisk.set(k, atRisk.get(k)! + late);
     // Would losing those points have cost the win?
-    if (scores[me] === ranked[0] && scores[me]! - late < Math.max(...scores.filter((_, i) => i !== me))) lostWins.set(k, lostWins.get(k)! + 1);
+    if (
+      scores[me] === ranked[0] &&
+      scores[me]! - late < Math.max(...scores.filter((_, i) => i !== me))
+    )
+      lostWins.set(k, lostWins.get(k)! + 1);
   }
 }
 
 console.log(`${games} games vs ${tableSpec}, params ${JSON.stringify(params)}`);
-console.log(`Damo: mean score ${(totals.score / games).toFixed(1)}, mean place ${(totals.place / games).toFixed(2)}, wins ${totals.wins}`);
-console.log(`| stall covers the last k auctions | points at risk per match | share of score | wins that would be lost |`);
+console.log(
+  `Damo: mean score ${(totals.score / games).toFixed(1)}, mean place ${(totals.place / games).toFixed(2)}, wins ${totals.wins}`,
+);
+console.log(
+  `| stall covers the last k auctions | points at risk per match | share of score | wins that would be lost |`,
+);
 console.log(`|---|---|---|---|`);
 for (const k of K) {
   const pts = atRisk.get(k)! / games;
-  console.log(`| ${k} | ${pts.toFixed(1)} | ${((100 * atRisk.get(k)!) / totals.score).toFixed(0)}% | ${lostWins.get(k)} of ${totals.wins} |`);
+  console.log(
+    `| ${k} | ${pts.toFixed(1)} | ${((100 * atRisk.get(k)!) / totals.score).toFixed(0)}% | ${lostWins.get(k)} of ${totals.wins} |`,
+  );
 }

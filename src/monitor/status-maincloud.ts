@@ -103,12 +103,26 @@ async function serverStatus(): Promise<ServerStatus> {
     out.lastSeen = seen.length ? new Date(Math.max(...seen)).toISOString() : null;
 
     const trend = history
-      .map((h) => ({ at: n(h.at), match: n(h.match_id), r: { openskillMu: n(h.openskill_mu), openskillSigma: n(h.openskill_sigma) } }))
+      .map((h) => ({
+        at: n(h.at),
+        match: n(h.match_id),
+        r: { openskillMu: n(h.openskill_mu), openskillSigma: n(h.openskill_sigma) },
+      }))
       .sort((a, b) => a.at - b.at);
-    out.trend = trend.slice(-15).map((h) => ({ at: new Date(h.at).toISOString(), match: h.match, rating: skill(h.r), spread: spread(h.r) }));
-    out.trendDelta = out.trend.length > 1 ? out.trend[out.trend.length - 1]!.rating - out.trend[0]!.rating : null;
+    out.trend = trend.slice(-15).map((h) => ({
+      at: new Date(h.at).toISOString(),
+      match: h.match,
+      rating: skill(h.r),
+      spread: spread(h.r),
+    }));
+    out.trendDelta =
+      out.trend.length > 1 ? out.trend[out.trend.length - 1]!.rating - out.trend[0]!.rating : null;
     out.lastDelta =
-      trend.length > 1 ? skill(trend[trend.length - 1]!.r) - skill(trend[trend.length - 2]!.r) : trend.length === 1 ? skill(trend[0]!.r) - 1500 : null;
+      trend.length > 1
+        ? skill(trend[trend.length - 1]!.r) - skill(trend[trend.length - 2]!.r)
+        : trend.length === 1
+          ? skill(trend[0]!.r) - 1500
+          : null;
 
     const lastSeat = seats.map((s) => n(s.match_id)).reduce((a, b) => Math.max(a, b), 0);
     if (lastSeat > 0) {
@@ -121,8 +135,10 @@ async function serverStatus(): Promise<ServerStatus> {
   return out;
 }
 
-const fmt = (x: number | null | undefined, d = 0) => (x === null || x === undefined ? "-" : x.toFixed(d));
-const sign = (x: number | null | undefined) => (x === null || x === undefined ? "-" : `${x >= 0 ? "+" : ""}${x}`);
+const fmt = (x: number | null | undefined, d = 0) =>
+  x === null || x === undefined ? "-" : x.toFixed(d);
+const sign = (x: number | null | undefined) =>
+  x === null || x === undefined ? "-" : `${x >= 0 ? "+" : ""}${x}`;
 
 function render(s: ServerStatus, l: LogStats): string {
   const lines: string[] = [];
@@ -131,21 +147,31 @@ function render(s: ServerStatus, l: LogStats): string {
   if (s.error) lines.push(`server: ERROR ${s.error}`);
   if (!s.found) lines.push(`server: no bot named '${s.name}' yet (set PALACE_BOT_NAME?)`);
   else {
-    const rank = s.provisional ? "provisional (no rank yet)" : `rank ${s.rank} of ${s.rankedBots} ranked (${s.rankAmongReal} among real bots)`;
-    lines.push(`bot      ${s.name} (#${s.botId}, v${s.version})  ${s.online ? "ONLINE" : "offline"}  last seen ${s.lastSeen ?? "-"}`);
+    const rank = s.provisional
+      ? "provisional (no rank yet)"
+      : `rank ${s.rank} of ${s.rankedBots} ranked (${s.rankAmongReal} among real bots)`;
+    lines.push(
+      `bot      ${s.name} (#${s.botId}, v${s.version})  ${s.online ? "ONLINE" : "offline"}  last seen ${s.lastSeen ?? "-"}`,
+    );
     lines.push(`rating   ${s.rating} ±${s.spread ?? "-"}  ${rank}`);
     lines.push(
       `record   ${s.matches} matches, ${s.wins} wins (${s.winRate === null || s.winRate === undefined ? "-" : (100 * s.winRate).toFixed(1)}%), avg score ${fmt(s.avgScore, 1)}` +
         (s.currentMatch ? `  | playing match ${s.currentMatch}` : ""),
     );
     if (s.trend?.length) {
-      lines.push(`trend    last ${sign(s.lastDelta)}, over ${s.trend.length} matches ${sign(s.trendDelta)}: ${s.trend.map((t) => t.rating).join(" ")}`);
+      lines.push(
+        `trend    last ${sign(s.lastDelta)}, over ${s.trend.length} matches ${sign(s.trendDelta)}: ${s.trend.map((t) => t.rating).join(" ")}`,
+      );
     }
   }
   lines.push("");
-  lines.push(`local logs (${l.files.length ? l.files.join(", ") : "none"}), agent ${l.agent ?? "-"}, last event ${l.lastEventAt ?? "-"}`);
+  lines.push(
+    `local logs (${l.files.length ? l.files.join(", ") : "none"}), agent ${l.agent ?? "-"}, last event ${l.lastEventAt ?? "-"}`,
+  );
   const mt = l.matchTotals;
-  lines.push(`  ${mt.n} matches logged, ${mt.wins} wins, avg place ${fmt(mt.avgPlace, 2)}, avg score ${fmt(mt.avgScore, 1)}`);
+  lines.push(
+    `  ${mt.n} matches logged, ${mt.wins} wins, avg place ${fmt(mt.avgPlace, 2)}, avg score ${fmt(mt.avgScore, 1)}`,
+  );
   if (l.matches.length) {
     lines.push("  last matches:  match     place  score  top  spent  won  words  unplayed");
     for (const m of l.matches) {
@@ -162,7 +188,9 @@ function render(s: ServerStatus, l: LogStats): string {
   );
   const refused = (label: string, m: Record<string, number>) => {
     const e = Object.entries(m).sort((a, b) => b[1] - a[1]);
-    lines.push(`  ${label} refusals: ${e.length ? e.map(([k, v]) => `${v}x ${k}`).join("; ") : "none"}`);
+    lines.push(
+      `  ${label} refusals: ${e.length ? e.map(([k, v]) => `${v}x ${k}`).join("; ") : "none"}`,
+    );
   };
   refused("bid", l.refusals.bid);
   refused("word", l.refusals.word);
@@ -171,13 +199,18 @@ function render(s: ServerStatus, l: LogStats): string {
   if (errs.length) lines.push(`  errors: ${errs.map(([k, v]) => `${v}x ${k}`).join("; ")}`);
   if (l.timing) {
     const t = l.timing;
-    lines.push(`  clock: offset ${t.offsetMs ?? "-"} ms (deadline ${t.deadlineOffsetMs ?? "-"}), one-way ${t.oneWayMs ?? "-"} ms, rtt p50 ${t.rttP50 ?? "-"}, recv lag p50 ${t.lagP50 ?? "-"}`);
+    lines.push(
+      `  clock: offset ${t.offsetMs ?? "-"} ms (deadline ${t.deadlineOffsetMs ?? "-"}), one-way ${t.oneWayMs ?? "-"} ms, rtt p50 ${t.rttP50 ?? "-"}, recv lag p50 ${t.lagP50 ?? "-"}`,
+    );
   }
   return lines.join("\n");
 }
 
 async function snapshot(json: boolean) {
-  const [server, local] = await Promise.all([serverStatus(), Promise.resolve(readLogStats(LOG_DIR))]);
+  const [server, local] = await Promise.all([
+    serverStatus(),
+    Promise.resolve(readLogStats(LOG_DIR)),
+  ]);
   const snap = { at: new Date().toISOString(), server, local };
   try {
     fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -198,8 +231,12 @@ async function main() {
     return;
   }
   for (;;) {
-    const text = await snapshot(json).catch((e) => `status failed: ${e instanceof Error ? e.message : e}`);
-    process.stdout.write("\x1b[2J\x1b[H" + text + `\n\n(refreshing every ${watch} s, ctrl-c to quit)\n`);
+    const text = await snapshot(json).catch(
+      (e) => `status failed: ${e instanceof Error ? e.message : e}`,
+    );
+    process.stdout.write(
+      "\x1b[2J\x1b[H" + text + `\n\n(refreshing every ${watch} s, ctrl-c to quit)\n`,
+    );
     await new Promise((r) => setTimeout(r, watch * 1000));
   }
 }

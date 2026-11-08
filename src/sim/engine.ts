@@ -353,7 +353,13 @@ export class Engine {
     if ("err" in r) {
       const p = this.byBot.get(botId);
       if (p) p.bidRejections++;
-      this.rejections.push({ round: this.round, botId, kind: "bid", input: String(amount), err: r.err });
+      this.rejections.push({
+        round: this.round,
+        botId,
+        kind: "bid",
+        input: String(amount),
+        err: r.err,
+      });
     }
     return r;
   }
@@ -380,7 +386,13 @@ export class Engine {
     if ("err" in r) {
       const p = this.byBot.get(botId);
       if (p) p.wordRejections++;
-      this.rejections.push({ round: this.round, botId, kind: "word", input: String(word), err: r.err });
+      this.rejections.push({
+        round: this.round,
+        botId,
+        kind: "word",
+        input: String(word),
+        err: r.err,
+      });
     }
     return r;
   }

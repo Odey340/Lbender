@@ -16,7 +16,9 @@
     "status": "tsx src/monitor/status.ts",
     "generate": "spacetime generate --lang typescript --out-dir src/module_bindings --module-path ${DAMO_UPSTREAM:-../scrabblebot/spacetimedb}",
     "test:it": "DAMO_IT=1 node --import tsx --test \"src/**/*.test.ts\"",
-    "rehearse": "tsx scripts/rehearse/run.ts"
+    "rehearse": "tsx scripts/rehearse/run.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "spacetimedb": "^2.12.0",
@@ -25,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/ws": "^8.5.0",
+    "prettier": "^3.9.10",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0"
   },

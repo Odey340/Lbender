@@ -7,7 +7,13 @@ import { test } from "node:test";
 import { StarterAgent } from "../agents/starter.js";
 import { DEFAULT_BAG, countsOf, emptyCounts, type Counts } from "../core/rules.js";
 import type { MatchView } from "../core/types.js";
-import { bestPlayable, countsToMap, findBestPlayable, isValidWord, lexWords } from "./dictionary.js";
+import {
+  bestPlayable,
+  countsToMap,
+  findBestPlayable,
+  isValidWord,
+  lexWords,
+} from "./dictionary.js";
 import { FastStarterAgent } from "./fast-starter.js";
 import { Rng } from "./rng.js";
 
@@ -18,11 +24,15 @@ test("the wordlist is the server's: 172,820 words, sorted, byte-identical when a
   // The upstream game module (DAMO_UPSTREAM, default ../scrabblebot/spacetimedb
   // next to this repo), if checked out.
   const upstream = path.join(
-    process.env.DAMO_UPSTREAM ? path.resolve(process.env.DAMO_UPSTREAM) : path.join(import.meta.dirname, "..", "..", "..", "scrabblebot", "spacetimedb"),
+    process.env.DAMO_UPSTREAM
+      ? path.resolve(process.env.DAMO_UPSTREAM)
+      : path.join(import.meta.dirname, "..", "..", "..", "scrabblebot", "spacetimedb"),
     "wordlist.txt",
   );
   if (fs.existsSync(upstream)) {
-    const ours = fs.readFileSync(path.join(import.meta.dirname, "..", "..", "data", "wordlist.txt"));
+    const ours = fs.readFileSync(
+      path.join(import.meta.dirname, "..", "..", "data", "wordlist.txt"),
+    );
     assert.ok(ours.equals(fs.readFileSync(upstream)));
   }
 });
@@ -65,7 +75,11 @@ test("bestPlayable equals the literal findBestPlayable", () => {
   for (let trial = 0; trial < 500; trial++) {
     const rack = randomRack(rng, rng.int(0, 16));
     for (const minLen of [2, 3]) {
-      assert.equal(bestPlayable(rack, minLen), findBestPlayable(countsToMap(rack), minLen), `rack ${countsToMap(rack).size} letters`);
+      assert.equal(
+        bestPlayable(rack, minLen),
+        findBestPlayable(countsToMap(rack), minLen),
+        `rack ${countsToMap(rack).size} letters`,
+      );
     }
   }
   // Hand-picked: ties go alphabetical, short racks, no word.

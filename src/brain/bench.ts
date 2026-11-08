@@ -61,9 +61,17 @@ async function main() {
     const seats: MatchSeat[] = table.slice(1).map((s, i) =>
       s.kind === "sim"
         ? { botId: s.botId, isSim: true, strategy: s.strategy }
-        : { botId: s.botId, isSim: false, agent: env.createClone!(s.botId, { seed: g * 10 + i, model: env.model }) },
+        : {
+            botId: s.botId,
+            isSim: false,
+            agent: env.createClone!(s.botId, { seed: g * 10 + i, model: env.model }),
+          },
     );
-    runMatch({ seats: [{ botId: 1_000_000, isSim: false, agent: timed }, ...seats], seed: 9000 + g, budgetMs: budget });
+    runMatch({
+      seats: [{ botId: 1_000_000, isSim: false, agent: timed }, ...seats],
+      seed: 9000 + g,
+      budgetMs: budget,
+    });
     process.stderr.write(`  game ${g + 1}/${games}\n`);
   }
   const row = (name: string, xs: number[]) =>
@@ -72,7 +80,9 @@ async function main() {
   console.log(row("quickBid", quick));
   console.log(row("refineBid overshoot", over));
   console.log(row("chooseWords", words));
-  console.log(`refine samples         p50 ${quantile(samples, 0.5)}  p10 ${quantile(samples, 0.1)}  mean ${(samples.reduce((a, b) => a + b, 0) / Math.max(1, samples.length)).toFixed(1)}`);
+  console.log(
+    `refine samples         p50 ${quantile(samples, 0.5)}  p10 ${quantile(samples, 0.1)}  mean ${(samples.reduce((a, b) => a + b, 0) / Math.max(1, samples.length)).toFixed(1)}`,
+  );
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

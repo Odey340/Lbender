@@ -10,7 +10,10 @@ const port = parentPort;
 if (!port) throw new Error("worker.ts must run in a worker thread");
 
 const fail = (e: unknown) =>
-  port.postMessage({ type: "error", message: e instanceof Error ? (e.stack ?? e.message) : String(e) });
+  port.postMessage({
+    type: "error",
+    message: e instanceof Error ? (e.stack ?? e.message) : String(e),
+  });
 
 let ctx: RunContext | undefined;
 try {

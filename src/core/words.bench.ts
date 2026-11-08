@@ -64,14 +64,18 @@ function main(): void {
     const racks = Array.from({ length: perSize }, () => randomRack(rand, size));
     let words = 0;
     for (const r of racks) words += engine.countPlayable(r);
-    console.log(`\n${size}-tile racks (${perSize}), mean ${(words / perSize).toFixed(0)} playable words`);
+    console.log(
+      `\n${size}-tile racks (${perSize}), mean ${(words / perSize).toFixed(0)} playable words`,
+    );
     console.log(`  best             ${time(racks, (r) => engine.best(r))}`);
     console.log(`  topK(10)         ${time(racks, (r) => engine.topK(r, 10))}`);
     console.log(`  serverBest(3)    ${time(racks, (r) => engine.serverBestPlayable(r, 3))}`);
     console.log(`  playable         ${time(racks, (r) => engine.playable(r))}`);
     console.log(`  bestPartition    ${time(racks, (r) => engine.bestPartition(r))}`);
     const unfinished = racks.filter((r) => !engine.bestPartition(r).optimal).length;
-    console.log(`    hit the default ${DEFAULT_PARTITION_BUDGET_MS} ms budget: ${unfinished}/${racks.length}`);
+    console.log(
+      `    hit the default ${DEFAULT_PARTITION_BUDGET_MS} ms budget: ${unfinished}/${racks.length}`,
+    );
   }
   const mb = (process.memoryUsage().heapUsed / 2 ** 20).toFixed(0);
   console.log(`\nheap in use: ${mb} MB`);

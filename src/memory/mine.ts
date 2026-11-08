@@ -82,28 +82,70 @@ const BOT = spec<Bot>({
   handle: (c) => c.db.bot,
   cols: ["id", "name", "team_id", "is_simulated", "strategy", "created_us", "deleted_us"],
   pk: "id",
-  values: (r) => [n(r.id), r.name, n(r.teamId), r.isSimulated ? 1 : 0, r.strategy.tag, us(r.createdAt), null],
+  values: (r) => [
+    n(r.id),
+    r.name,
+    n(r.teamId),
+    r.isSimulated ? 1 : 0,
+    r.strategy.tag,
+    us(r.createdAt),
+    null,
+  ],
   tombstone: true,
 });
 const BOT_STATS = spec<BotStats>({
   table: "bot_stats",
   handle: (c) => c.db.botStats,
-  cols: ["bot_id", "rating", "matches_played", "wins", "total_score", "last_played_us", "mu", "sigma"],
+  cols: [
+    "bot_id",
+    "rating",
+    "matches_played",
+    "wins",
+    "total_score",
+    "last_played_us",
+    "mu",
+    "sigma",
+  ],
   pk: "bot_id",
   values: (r) => [
-    n(r.botId), r.rating, r.matchesPlayed, r.wins, n(r.totalScore), us(r.lastPlayed),
-    r.openskillMu, r.openskillSigma,
+    n(r.botId),
+    r.rating,
+    r.matchesPlayed,
+    r.wins,
+    n(r.totalScore),
+    us(r.lastPlayed),
+    r.openskillMu,
+    r.openskillSigma,
   ],
   tombstone: false,
 });
 const RETIRED = spec<RetiredBotStats>({
   table: "retired_bot_stats",
   handle: (c) => c.db.retiredBotStats,
-  cols: ["id", "bot_id", "version", "rating", "matches_played", "wins", "total_score", "last_played_us", "mu", "sigma"],
+  cols: [
+    "id",
+    "bot_id",
+    "version",
+    "rating",
+    "matches_played",
+    "wins",
+    "total_score",
+    "last_played_us",
+    "mu",
+    "sigma",
+  ],
   pk: "id",
   values: (r) => [
-    n(r.id), n(r.botId), r.version, r.rating, r.matchesPlayed, r.wins, n(r.totalScore),
-    us(r.lastPlayed), r.openskillMu, r.openskillSigma,
+    n(r.id),
+    n(r.botId),
+    r.version,
+    r.rating,
+    r.matchesPlayed,
+    r.wins,
+    n(r.totalScore),
+    us(r.lastPlayed),
+    r.openskillMu,
+    r.openskillSigma,
   ],
   tombstone: false,
 });
@@ -119,13 +161,33 @@ const MATCH = spec<Match>({
   table: "match_state",
   handle: (c) => c.db.matchState,
   cols: [
-    "id", "status", "current_round", "current_auction_id", "bag_total", "auction_type", "created_us",
-    "started_us", "ended_us", "auction_duration_ms", "starting_rack_size", "deleted_us",
+    "id",
+    "status",
+    "current_round",
+    "current_auction_id",
+    "bag_total",
+    "auction_type",
+    "created_us",
+    "started_us",
+    "ended_us",
+    "auction_duration_ms",
+    "starting_rack_size",
+    "deleted_us",
   ],
   pk: "id",
   values: (r) => [
-    n(r.id), r.status.tag, r.currentRound, n(r.currentAuctionId), r.bagTotal, r.auctionType.tag,
-    us(r.createdAt), us(r.startedAt), us(r.endedAt), n(r.auctionDurationMs), r.startingRackSize, null,
+    n(r.id),
+    r.status.tag,
+    r.currentRound,
+    n(r.currentAuctionId),
+    r.bagTotal,
+    r.auctionType.tag,
+    us(r.createdAt),
+    us(r.startedAt),
+    us(r.endedAt),
+    n(r.auctionDurationMs),
+    r.startingRackSize,
+    null,
   ],
   tombstone: true,
 });
@@ -133,23 +195,52 @@ const TOURNAMENT = spec<Tournament>({
   table: "tournament",
   handle: (c) => c.db.tournament,
   cols: [
-    "id", "status", "swiss_rounds_total", "current_round", "top_cut", "match_size", "auction_type",
-    "created_us", "ended_us", "winner_bot_id",
+    "id",
+    "status",
+    "swiss_rounds_total",
+    "current_round",
+    "top_cut",
+    "match_size",
+    "auction_type",
+    "created_us",
+    "ended_us",
+    "winner_bot_id",
   ],
   pk: "id",
   values: (r) => [
-    n(r.id), r.status.tag, r.swissRoundsTotal, r.currentRound, r.topCut, r.matchSize, r.auctionType.tag,
-    us(r.createdAt), us(r.endedAt), n(r.winnerBotId),
+    n(r.id),
+    r.status.tag,
+    r.swissRoundsTotal,
+    r.currentRound,
+    r.topCut,
+    r.matchSize,
+    r.auctionType.tag,
+    us(r.createdAt),
+    us(r.endedAt),
+    n(r.winnerBotId),
   ],
   tombstone: false,
 });
 const TOURNAMENT_ENTRY = spec<TournamentEntry>({
   table: "tournament_entry",
   handle: (c) => c.db.tournamentEntry,
-  cols: ["id", "tournament_id", "bot_id", "swiss_points", "eliminated", "total_score", "final_finish_position"],
+  cols: [
+    "id",
+    "tournament_id",
+    "bot_id",
+    "swiss_points",
+    "eliminated",
+    "total_score",
+    "final_finish_position",
+  ],
   pk: "id",
   values: (r) => [
-    n(r.id), n(r.tournamentId), n(r.botId), r.swissPoints, r.eliminated ? 1 : 0, n(r.totalScore),
+    n(r.id),
+    n(r.tournamentId),
+    n(r.botId),
+    r.swissPoints,
+    r.eliminated ? 1 : 0,
+    n(r.totalScore),
     n(r.finalFinishPosition),
   ],
   tombstone: false,
@@ -177,7 +268,15 @@ const RESULT = spec<AuctionResult>({
   handle: (c) => c.db.auctionResult,
   cols: ["auction_id", "match_id", "letter", "winner_bot_id", "paid", "closed_us", "deleted_us"],
   pk: "auction_id",
-  values: (r) => [n(r.auctionId), n(r.matchId), r.letter, n(r.winnerBotId), n(r.paid), us(r.closedAt), null],
+  values: (r) => [
+    n(r.auctionId),
+    n(r.matchId),
+    r.letter,
+    n(r.winnerBotId),
+    n(r.paid),
+    us(r.closedAt),
+    null,
+  ],
   matchId: (r) => Number(r.matchId),
   tombstone: true,
 });
@@ -193,11 +292,28 @@ const ARCHIVE = spec<AuctionTopBidArchive>({
 const WORD = spec<WordPlay>({
   table: "word_play",
   handle: (c) => c.db.wordPlay,
-  cols: ["id", "match_id", "bot_id", "word", "base_score", "bonus", "total_reward", "played_us", "deleted_us"],
+  cols: [
+    "id",
+    "match_id",
+    "bot_id",
+    "word",
+    "base_score",
+    "bonus",
+    "total_reward",
+    "played_us",
+    "deleted_us",
+  ],
   pk: "id",
   values: (r) => [
-    n(r.id), n(r.matchId), n(r.botId), r.word, n(r.baseScore), n(r.bonus), n(r.totalReward),
-    us(r.playedAt), null,
+    n(r.id),
+    n(r.matchId),
+    n(r.botId),
+    r.word,
+    n(r.baseScore),
+    n(r.bonus),
+    n(r.totalReward),
+    us(r.playedAt),
+    null,
   ],
   matchId: (r) => Number(r.matchId),
   tombstone: true,
@@ -216,14 +332,24 @@ const RATING = spec<RatingHistory>({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySpec = Spec<any>;
-const BASE: AnySpec[] = [BOT, BOT_STATS, RETIRED, BOT_VERSION, MATCH, TOURNAMENT, TOURNAMENT_ENTRY, TOURNAMENT_MATCH];
+const BASE: AnySpec[] = [
+  BOT,
+  BOT_STATS,
+  RETIRED,
+  BOT_VERSION,
+  MATCH,
+  TOURNAMENT,
+  TOURNAMENT_ENTRY,
+  TOURNAMENT_MATCH,
+];
 const PER_MATCH: AnySpec[] = [PARTICIPANT, RESULT, ARCHIVE, WORD, RATING];
 const ALL: AnySpec[] = [...BASE, ...PER_MATCH];
 
 const baseQueries = () => BASE.map((s) => `SELECT * FROM ${s.table}`);
 const rangeQueries = (lo: number, hi: number) =>
   PER_MATCH.map((s) => `SELECT * FROM ${s.table} WHERE match_id >= ${lo} AND match_id <= ${hi}`);
-const followQueries = (above: number) => PER_MATCH.map((s) => `SELECT * FROM ${s.table} WHERE match_id > ${above}`);
+const followQueries = (above: number) =>
+  PER_MATCH.map((s) => `SELECT * FROM ${s.table} WHERE match_id > ${above}`);
 
 // ---------- SQLite writers ----------
 
@@ -263,11 +389,14 @@ function writeBaseTable(w: Writer, conn: DbConnection, s: AnySpec, nowUs: number
     keys.add(Number(s.values(r)[0]));
     count++;
   }
-  const local = w.db.prepare(`SELECT ${s.pk} AS k FROM ${s.table}${s.tombstone ? " WHERE deleted_us IS NULL" : ""}`).all();
+  const local = w.db
+    .prepare(`SELECT ${s.pk} AS k FROM ${s.table}${s.tombstone ? " WHERE deleted_us IS NULL" : ""}`)
+    .all();
   for (const row of local) {
     const k = Number(row.k);
     if (!keys.has(k)) {
-      if (s.tombstone) w.db.prepare(`UPDATE ${s.table} SET deleted_us = ? WHERE ${s.pk} = ?`).run(nowUs, k);
+      if (s.tombstone)
+        w.db.prepare(`UPDATE ${s.table} SET deleted_us = ? WHERE ${s.pk} = ?`).run(nowUs, k);
       else w.db.prepare(`DELETE FROM ${s.table} WHERE ${s.pk} = ?`).run(k);
     }
   }
@@ -321,7 +450,10 @@ function writeChunk(w: Writer, conn: DbConnection, ids: number[]): Record<string
 /** Matches the server has that we haven't fully mined, ascending. */
 function matchesToFetch(db: Db, conn: DbConnection): number[] {
   const done = new Set(
-    db.prepare("SELECT match_id FROM match_mined WHERE complete = 1").all().map((r) => Number(r.match_id)),
+    db
+      .prepare("SELECT match_id FROM match_mined WHERE complete = 1")
+      .all()
+      .map((r) => Number(r.match_id)),
   );
   const ids: number[] = [];
   for (const m of conn.db.matchState.iter()) {
@@ -355,17 +487,27 @@ function connect(): Promise<{ conn: DbConnection; closed: Promise<string> }> {
         reject(err);
         resolveClosed(`connect error: ${err.message}`);
       })
-      .onDisconnect((_ctx, err) => resolveClosed(err ? `disconnected: ${err.message}` : "disconnected"))
+      .onDisconnect((_ctx, err) =>
+        resolveClosed(err ? `disconnected: ${err.message}` : "disconnected"),
+      )
       .build();
   });
 }
 
-function subscribe(conn: DbConnection, queries: string[], timeoutMs = 120_000): Promise<SubscriptionHandle> {
+function subscribe(
+  conn: DbConnection,
+  queries: string[],
+  timeoutMs = 120_000,
+): Promise<SubscriptionHandle> {
   for (const q of queries) {
-    if (/visible_auction_top_bids/i.test(q)) throw new Error("refusing to read visible_auction_top_bids");
+    if (/visible_auction_top_bids/i.test(q))
+      throw new Error("refusing to read visible_auction_top_bids");
   }
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`subscription timed out: ${queries[0]}`)), timeoutMs);
+    const timer = setTimeout(
+      () => reject(new Error(`subscription timed out: ${queries[0]}`)),
+      timeoutMs,
+    );
     const handle: SubscriptionHandle = conn
       .subscriptionBuilder()
       .onApplied(() => {
@@ -412,7 +554,8 @@ class LiveSink {
   constructor(private w: Writer) {}
 
   attach(conn: DbConnection): void {
-    const live = (ctx: EventContext) => ctx.event.tag === "Transaction" || ctx.event.tag === "Reducer";
+    const live = (ctx: EventContext) =>
+      ctx.event.tag === "Transaction" || ctx.event.tag === "Reducer";
     for (const s of ALL) {
       const h = s.handle(conn);
       h.onInsert((ctx, row) => live(ctx) && this.ops.push({ s, row, del: false }));
@@ -492,7 +635,9 @@ async function fitInProcess(dbPath: string): Promise<void> {
   const { fitAndPersist } = await import("./train.js");
   const t = Date.now();
   const r = fitAndPersist(dbPath);
-  log(`fitted ${r.bots} bot models + market from ${r.obs} observations in ${((Date.now() - t) / 1000).toFixed(1)}s`);
+  log(
+    `fitted ${r.bots} bot models + market from ${r.obs} observations in ${((Date.now() - t) / 1000).toFixed(1)}s`,
+  );
 }
 
 /**
@@ -503,16 +648,22 @@ async function fitInProcess(dbPath: string): Promise<void> {
 async function fitAndPersistSafe(dbPath: string): Promise<void> {
   try {
     await new Promise<void>((resolve, reject) => {
-      const child = spawn(process.execPath, [...process.execArgv, process.argv[1]!, "--fit-only", "--db", dbPath], {
-        stdio: ["ignore", "inherit", "inherit"],
-      });
+      const child = spawn(
+        process.execPath,
+        [...process.execArgv, process.argv[1]!, "--fit-only", "--db", dbPath],
+        {
+          stdio: ["ignore", "inherit", "inherit"],
+        },
+      );
       try {
         if (child.pid) setPriority(child.pid, 15);
       } catch {
         /* keep the inherited priority */
       }
       child.on("error", reject);
-      child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`fit exited with ${code}`))));
+      child.on("exit", (code) =>
+        code === 0 ? resolve() : reject(new Error(`fit exited with ${code}`)),
+      );
     });
   } catch (e) {
     log("model fit failed:", e instanceof Error ? e.message : e);
@@ -542,7 +693,10 @@ async function session(o: Options, db: Db, w: Writer): Promise<string> {
       await unsubscribe(h);
       sink.flush();
       if ((i / o.chunk) % 5 === 0 || i + o.chunk >= todo.length) {
-        log(`  matches ${ids[0]}..${ids.at(-1)} (${Math.min(i + o.chunk, todo.length)}/${todo.length})`, JSON.stringify(counts));
+        log(
+          `  matches ${ids[0]}..${ids.at(-1)} (${Math.min(i + o.chunk, todo.length)}/${todo.length})`,
+          JSON.stringify(counts),
+        );
       }
       await sleep(150); // be gentle
     }
@@ -554,7 +708,9 @@ async function session(o: Options, db: Db, w: Writer): Promise<string> {
     if (o.derive) {
       const t = Date.now();
       const d = deriveAll(db, { rebuild: o.rederive });
-      log(`derived ${d.matches} matches (${d.bidObs} bid obs, ${d.playObs} plays, ${d.balanceMismatches} balance mismatches) in ${((Date.now() - t) / 1000).toFixed(1)}s`);
+      log(
+        `derived ${d.matches} matches (${d.bidObs} bid obs, ${d.playObs} plays, ${d.balanceMismatches} balance mismatches) in ${((Date.now() - t) / 1000).toFixed(1)}s`,
+      );
       o.rederive = false;
     }
     if (o.fit) await fitAndPersistSafe(o.dbPath);

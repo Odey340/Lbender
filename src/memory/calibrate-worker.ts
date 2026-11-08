@@ -11,7 +11,10 @@ const port = parentPort;
 if (!port) throw new Error("calibrate-worker.ts must run in a worker thread");
 
 const fail = (e: unknown) =>
-  port.postMessage({ type: "error", message: e instanceof Error ? (e.stack ?? e.message) : String(e) });
+  port.postMessage({
+    type: "error",
+    message: e instanceof Error ? (e.stack ?? e.message) : String(e),
+  });
 
 const env: Env = {};
 try {

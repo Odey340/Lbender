@@ -28,7 +28,8 @@ function id(n: bigint): string {
 /** Who we are, and the small public tables a view needs. */
 export function baseQueries(identityHex: string | null): string[] {
   const q = ["SELECT * FROM bot", "SELECT * FROM tournament"];
-  if (identityHex) q.unshift(`SELECT * FROM bot_credential WHERE identity = ${identityLiteral(identityHex)}`);
+  if (identityHex)
+    q.unshift(`SELECT * FROM bot_credential WHERE identity = ${identityLiteral(identityHex)}`);
   return q;
 }
 
@@ -99,6 +100,7 @@ export const FORBIDDEN_TABLES = ["visible_auction_top_bids"];
 export function assertAllowed(queries: readonly string[]) {
   for (const q of queries) {
     const lower = q.toLowerCase();
-    for (const t of FORBIDDEN_TABLES) if (lower.includes(t)) throw new Error(`refusing to subscribe to ${t}`);
+    for (const t of FORBIDDEN_TABLES)
+      if (lower.includes(t)) throw new Error(`refusing to subscribe to ${t}`);
   }
 }

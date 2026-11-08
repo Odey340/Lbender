@@ -22,7 +22,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STARTING_BALANCE, letterValue } from "../core/rules.js";
-import type { Agent, AuctionType, AuctionView, MatchView, TournamentStage, TournamentView } from "../core/types.js";
+import type {
+  Agent,
+  AuctionType,
+  AuctionView,
+  MatchView,
+  TournamentStage,
+  TournamentView,
+} from "../core/types.js";
 import { runMatch, type MatchOutcome, type MatchSeat } from "./engine.js";
 import { importIfPresent } from "./registry.js";
 import { deriveSeed } from "./rng.js";
@@ -135,7 +142,12 @@ function timed(agent: Agent, budgetMs: number, t: CallTimes): Agent {
   return wrapped;
 }
 
-export function levelStandings(botIds: readonly number[], stage: TournamentStage, matchSize: number, round = 1): TournamentView {
+export function levelStandings(
+  botIds: readonly number[],
+  stage: TournamentStage,
+  matchSize: number,
+  round = 1,
+): TournamentView {
   return {
     phase: stage,
     round,
@@ -176,13 +188,25 @@ async function setup(opts: TournamentRunOptions): Promise<Ctx> {
   return ctx;
 }
 
-function playOne(ctx: Ctx, game: number, matchId: number, view: ((ids: number[]) => TournamentView | undefined) | undefined): {
+function playOne(
+  ctx: Ctx,
+  game: number,
+  matchId: number,
+  view: ((ids: number[]) => TournamentView | undefined) | undefined,
+): {
   out: MatchOutcome;
   reports: SeatReport[];
 } {
   const plan = planGame(ctx.run, game);
   const budgetMs = ctx.opts.budgetMs ?? 700;
-  const times = plan.seats.map((): CallTimes => ({ quickMax: 0, quickOver20: 0, refineMax: 0, refineOverBudget: 0, wordsMax: 0, calls: 0 }));
+  const times = plan.seats.map((): CallTimes => ({
+    quickMax: 0,
+    quickOver20: 0,
+    refineMax: 0,
+    refineOverBudget: 0,
+    wordsMax: 0,
+    calls: 0,
+  }));
   const seats: MatchSeat[] = plan.seats.map((s, i) => {
     const seed = deriveSeed(plan.dealSeed, "agent", i);
     let agent =
@@ -211,7 +235,9 @@ function playOne(ctx: Ctx, game: number, matchId: number, view: ((ids: number[])
   out.seats.forEach((s, i) => {
     if (plan.seats[i]!.spec.kind !== "palace") return;
     const place = placeOf(scores, i);
-    const words = out.engine.history.filter((e) => e.kind === "word" && e.botId === s.botId) as { word: string }[];
+    const words = out.engine.history.filter((e) => e.kind === "word" && e.botId === s.botId) as {
+      word: string;
+    }[];
     let maxBid = 0;
     let absurd = 0;
     let absurdSample: string | undefined;
@@ -288,7 +314,10 @@ export interface TournamentRunResult {
   warnings: string[];
 }
 
-export async function runTournamentConfig(opts: TournamentRunOptions, onProgress?: (done: number, total: number) => void): Promise<TournamentRunResult> {
+export async function runTournamentConfig(
+  opts: TournamentRunOptions,
+  onProgress?: (done: number, total: number) => void,
+): Promise<TournamentRunResult> {
   const t0 = performance.now();
   const ctx = await setup(opts);
   const reports: SeatReport[] = [];
@@ -319,7 +348,12 @@ export async function runTournamentConfig(opts: TournamentRunOptions, onProgress
     }
   } else {
     for (let game = 0; game < opts.games; game++) {
-      const { reports: rs } = playOne(ctx, game, game + 1, opts.stage ? (ids) => levelStandings(ids, opts.stage!, size) : undefined);
+      const { reports: rs } = playOne(
+        ctx,
+        game,
+        game + 1,
+        opts.stage ? (ids) => levelStandings(ids, opts.stage!, size) : undefined,
+      );
       reports.push(...rs);
       onProgress?.(game + 1, opts.games);
     }
@@ -335,13 +369,14 @@ export async function runTournamentConfig(opts: TournamentRunOptions, onProgress
 
 // ---------- summary ----------
 
-const mean = (xs: readonly number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
+const mean = (xs: readonly number[]) =>
+  xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN;
 const sd = (xs: readonly number[]) => {
   if (xs.length < 2) return NaN;
   const m = mean(xs);
   return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length - 1));
 };
-const ci95 = (xs: readonly number[]) => 1.96 * sd(xs) / Math.sqrt(Math.max(1, xs.length));
+const ci95 = (xs: readonly number[]) => (1.96 * sd(xs)) / Math.sqrt(Math.max(1, xs.length));
 const f = (x: number, d = 1) => (Number.isFinite(x) ? x.toFixed(d) : "n/a");
 
 export function summarize(r: TournamentRunResult): Record<string, unknown> {
@@ -411,25 +446,51 @@ function parseArgs(argv: string[]): { opts: TournamentRunOptions; out?: string }
       return v;
     };
     switch (a) {
-      case "--table": opts.table = value(); break;
-      case "--games": opts.games = Number(value()); break;
-      case "--seed": opts.seed = Number(value()); break;
+      case "--table":
+        opts.table = value();
+        break;
+      case "--games":
+        opts.games = Number(value());
+        break;
+      case "--seed":
+        opts.seed = Number(value());
+        break;
       case "--stage": {
         const v = value();
-        if (v !== "Swiss" && v !== "Bracket" && v !== "Final") throw new Error(`--stage needs Swiss|Bracket|Final, got '${v}'`);
+        if (v !== "Swiss" && v !== "Bracket" && v !== "Final")
+          throw new Error(`--stage needs Swiss|Bracket|Final, got '${v}'`);
         opts.stage = v;
         break;
       }
-      case "--series": opts.series = true; break;
-      case "--first-price": opts.auctionType = "FirstPrice"; break;
-      case "--rack": opts.startingRackSize = Number(value()); break;
-      case "--match-size": opts.matchSize = Number(value()); break;
-      case "--live": opts.live = true; break;
-      case "--budget": opts.budgetMs = Number(value()); break;
-      case "--no-model": opts.model = false; break;
-      case "--params": opts.params = JSON.parse(value()) as Record<string, unknown>; break;
-      case "--out": out = value(); break;
-      default: throw new Error(`unknown option '${a}'`);
+      case "--series":
+        opts.series = true;
+        break;
+      case "--first-price":
+        opts.auctionType = "FirstPrice";
+        break;
+      case "--rack":
+        opts.startingRackSize = Number(value());
+        break;
+      case "--match-size":
+        opts.matchSize = Number(value());
+        break;
+      case "--live":
+        opts.live = true;
+        break;
+      case "--budget":
+        opts.budgetMs = Number(value());
+        break;
+      case "--no-model":
+        opts.model = false;
+        break;
+      case "--params":
+        opts.params = JSON.parse(value()) as Record<string, unknown>;
+        break;
+      case "--out":
+        out = value();
+        break;
+      default:
+        throw new Error(`unknown option '${a}'`);
     }
   }
   return { opts, out };
@@ -440,12 +501,20 @@ async function main() {
   const r = await runTournamentConfig(opts, (d, t) => process.stderr.write(`\r${d}/${t}`));
   process.stderr.write("\n");
   const s = summarize(r);
-  if (out) fs.writeFileSync(out, JSON.stringify({ summary: s, reports: r.reports, series: r.series }, null, 1));
+  if (out)
+    fs.writeFileSync(
+      out,
+      JSON.stringify({ summary: s, reports: r.reports, series: r.series }, null, 1),
+    );
   console.log(JSON.stringify(s));
 }
 
 const entry = process.argv[1] ? path.resolve(process.argv[1]) : "";
-if (entry && fs.existsSync(entry) && fs.realpathSync(entry) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+if (
+  entry &&
+  fs.existsSync(entry) &&
+  fs.realpathSync(entry) === fs.realpathSync(fileURLToPath(import.meta.url))
+) {
   main().catch((e: unknown) => {
     console.error(e instanceof Error ? (e.stack ?? e.message) : e);
     process.exit(1);

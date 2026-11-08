@@ -56,12 +56,21 @@ function play(g: number, bag: number | null) {
   const specs = tableSpec === "palaces" ? Array(5).fill("palace") : tableSpec.split(",");
   const seats: MatchSeat[] = specs.map((s, i) => {
     const sd = (seed * 31 + i * 7919) >>> 0;
-    if (s === "palace") return { botId: 100 + i, isSim: false, agent: createAgent({ mode: "sim", seed: sd, params, model: env.model }) };
+    if (s === "palace")
+      return {
+        botId: 100 + i,
+        isSim: false,
+        agent: createAgent({ mode: "sim", seed: sd, params, model: env.model }),
+      };
     const id = Number(s.split(":")[1]);
     return { botId: id, isSim: false, agent: env.createClone!(id, { seed: sd, model: env.model }) };
   });
   const damo = createAgent({ mode: "sim", seed: seed ^ 0x5bd1e995, params, model: env.model });
-  seats.splice(g % (seats.length + 1), 0, { botId: TEST, isSim: false, agent: bag === null ? damo : new FalseAlarm(damo, bag) });
+  seats.splice(g % (seats.length + 1), 0, {
+    botId: TEST,
+    isSim: false,
+    agent: bag === null ? damo : new FalseAlarm(damo, bag),
+  });
   const out = runMatch({ seats, seed, matchId: g + 1 });
   const scores = out.seats.map((s) => s.score);
   const me = out.seats.findIndex((s) => s.botId === TEST);
@@ -77,7 +86,7 @@ const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const ci = (xs: number[]) => {
   const m = mean(xs);
   const sd = Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, xs.length - 1));
-  return 1.96 * sd / Math.sqrt(xs.length);
+  return (1.96 * sd) / Math.sqrt(xs.length);
 };
 const base = res.get(null)!;
 console.log(`${games} paired deals vs ${tableSpec}, params ${JSON.stringify(params)}`);
@@ -88,5 +97,7 @@ for (const a of arms) {
   const ds = r.map((x, i) => x.score - base[i]!.score);
   const dp = r.map((x, i) => x.place - base[i]!.place);
   const name = a === null ? "plain Damo" : `false alarm at bag ${a}`;
-  console.log(`| ${name} | ${mean(r.map((x) => x.score)).toFixed(1)} | ${mean(r.map((x) => x.place)).toFixed(2)} | ${r.reduce((s, x) => s + x.win, 0)} | ${a === null ? "-" : `${mean(ds).toFixed(1)} ±${ci(ds).toFixed(1)}`} | ${a === null ? "-" : `${mean(dp).toFixed(2)} ±${ci(dp).toFixed(2)}`} |`);
+  console.log(
+    `| ${name} | ${mean(r.map((x) => x.score)).toFixed(1)} | ${mean(r.map((x) => x.place)).toFixed(2)} | ${r.reduce((s, x) => s + x.win, 0)} | ${a === null ? "-" : `${mean(ds).toFixed(1)} ±${ci(ds).toFixed(1)}`} | ${a === null ? "-" : `${mean(dp).toFixed(2)} ±${ci(dp).toFixed(2)}`} |`,
+  );
 }

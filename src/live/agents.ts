@@ -48,22 +48,29 @@ async function tryImport(spec: string): Promise<Record<string, unknown> | null> 
   }
 }
 
-export async function loadAgent(name: string, mode: "live" | "sim" = "live", seed?: number): Promise<LoadedAgent> {
+export async function loadAgent(
+  name: string,
+  mode: "live" | "sim" = "live",
+  seed?: number,
+): Promise<LoadedAgent> {
   const notes: string[] = [];
   const fallback = (why: string): LoadedAgent => {
     notes.push(why);
     return { agent: new StarterAgent(), requested: name, fallback: true, notes };
   };
 
-  if (name === "starter") return { agent: new StarterAgent(), requested: name, fallback: false, notes };
-  if (name === "timing-probe") return { agent: new TimingProbeAgent(), requested: name, fallback: false, notes };
+  if (name === "starter")
+    return { agent: new StarterAgent(), requested: name, fallback: false, notes };
+  if (name === "timing-probe")
+    return { agent: new TimingProbeAgent(), requested: name, fallback: false, notes };
 
   if (name.startsWith("clone:")) {
     const botId = Number(name.slice(6));
     const spec = "../memory/clones.js";
     try {
       const mod = await tryImport(spec);
-      const make = mod?.createCloneAgent as ((id: number, o?: { seed?: number }) => Agent) | undefined;
+      const make = mod?.createCloneAgent as
+        ((id: number, o?: { seed?: number }) => Agent) | undefined;
       if (!make) return fallback("src/memory/clones.ts missing or has no createCloneAgent");
       return { agent: make(botId, { seed }), requested: name, fallback: false, notes };
     } catch (e) {

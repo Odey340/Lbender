@@ -45,7 +45,11 @@ function draw(pmf: Float64Array, u: number): number {
  * Sealed bids against an independent competing max M: the winner's bid is
  * seen exactly, a loser's only as "<= M" (Vickrey: M is what was paid).
  */
-function simulate(p: BidParams, n: number, seed: number): { obs: ObsBuilder; winners: ObsBuilder; exact: number } {
+function simulate(
+  p: BidParams,
+  n: number,
+  seed: number,
+): { obs: ObsBuilder; winners: ObsBuilder; exact: number } {
   const rng = rng32(seed);
   const b = new ObsBuilder();
   const winners = new ObsBuilder();
@@ -57,9 +61,21 @@ function simulate(p: BidParams, n: number, seed: number): { obs: ObsBuilder; win
     const rack = 3 + Math.floor(rng() * 10);
     const bid = draw(bidPmf(p, letter, phase, balance, rack), rng());
     // Competitors: around face value + 2, with spread.
-    const M = Math.max(0, Math.round(Math.exp(Math.log(LETTER_VALUES[letter]! + 2) + 0.5 * gauss(rng))));
+    const M = Math.max(
+      0,
+      Math.round(Math.exp(Math.log(LETTER_VALUES[letter]! + 2) + 0.5 * gauss(rng))),
+    );
     if (bid > M) {
-      const o = { letter, phase, balance, cap: balance, rack, kind: KIND_EQ, value: bid, weight: 1 };
+      const o = {
+        letter,
+        phase,
+        balance,
+        cap: balance,
+        rack,
+        kind: KIND_EQ,
+        value: bid,
+        weight: 1,
+      };
       b.add(o);
       winners.add(o);
       exact++;
@@ -88,7 +104,10 @@ test("censored fit recovers known parameters from winner-only exact bids", () =>
   const fit = fitBidModel(set, defaultParams(LETTER_VALUES), MARKET_PRIOR, { maxIter: 500 }).params;
 
   // Sigma, slopes and the per-letter means of common letters come back.
-  assert.ok(Math.abs(fit.logSigma - p.logSigma) < 0.08, `logSigma ${fit.logSigma} vs ${p.logSigma}`);
+  assert.ok(
+    Math.abs(fit.logSigma - p.logSigma) < 0.08,
+    `logSigma ${fit.logSigma} vs ${p.logSigma}`,
+  );
   assert.ok(Math.abs(fit.thetaMu - p.thetaMu) < 0.1, `thetaMu ${fit.thetaMu}`);
   assert.ok(Math.abs(fit.rhoMu - p.rhoMu) < 0.1, `rhoMu ${fit.rhoMu}`);
   // a and phi trade off by a constant; compare the identified sums.
@@ -110,9 +129,14 @@ test("censored fit recovers known parameters from winner-only exact bids", () =>
   const heldOut = simulate(p, 20_000, 99).obs.build();
   const good = logLik(heldOut, fit);
   const naive = simulate(p, 60_000, 7).winners;
-  const naiveFit = fitBidModel(naive.build(), defaultParams(LETTER_VALUES), MARKET_PRIOR, { maxIter: 300 }).params;
+  const naiveFit = fitBidModel(naive.build(), defaultParams(LETTER_VALUES), MARKET_PRIOR, {
+    maxIter: 300,
+  }).params;
   const bad = logLik(heldOut, naiveFit);
-  assert.ok(good.ll / good.w > bad.ll / bad.w + 0.05, `censored ${good.ll / good.w} vs naive ${bad.ll / bad.w}`);
+  assert.ok(
+    good.ll / good.w > bad.ll / bad.w + 0.05,
+    `censored ${good.ll / good.w} vs naive ${bad.ll / bad.w}`,
+  );
 });
 
 test("thin data shrinks toward the market, rich data overrides it", () => {
@@ -122,7 +146,8 @@ test("thin data shrinks toward the market, rich data overrides it", () => {
   const Z = 25;
   bot.a[Q] = market.a[Q]! + 1.0; // this bot loves Q and Z
   bot.a[Z] = market.a[Z]! + 1.0;
-  const dev = (q: BidParams, l: number) => q.a[l]! - market.a[l]! - (q.a.reduce((s, x, i) => s + x - market.a[i]!, 0) / 26);
+  const dev = (q: BidParams, l: number) =>
+    q.a[l]! - market.a[l]! - q.a.reduce((s, x, i) => s + x - market.a[i]!, 0) / 26;
 
   const thin = fitBidModel(simulate(bot, 30, 3).obs.build(), market, BOT_PRIOR).params;
   const rich = fitBidModel(simulate(bot, 40_000, 4).obs.build(), market, BOT_PRIOR).params;
@@ -190,7 +215,9 @@ test("runner-up EM removes the downward bias of plain censoring with many bidder
   for (let a = 0; a < auctions; a++) {
     const letter = Math.floor(rng() * 26);
     const phase = rng() * 0.96;
-    const bids = Array.from({ length: bidders }, () => draw(bidPmf(p, letter, phase, 100, 7), rng()));
+    const bids = Array.from({ length: bidders }, () =>
+      draw(bidPmf(p, letter, phase, 100, 7), rng()),
+    );
     const order = bids.map((b, k) => ({ b, k, r: rng() })).sort((x, y) => y.b - x.b || x.r - y.r);
     const top = order[0]!;
     const paid = top.b === 0 ? 0 : order[1]!.b > 0 ? order[1]!.b : 1;
@@ -220,7 +247,12 @@ test("runner-up EM removes the downward bias of plain censoring with many bidder
       i++;
     }
   }
-  const bots = new Map(Array.from({ length: bidders }, (_, k) => [k + 1, { name: `b${k}`, isSim: false, strategy: "Human", versions: [] }]));
+  const bots = new Map(
+    Array.from({ length: bidders }, (_, k) => [
+      k + 1,
+      { name: `b${k}`, isSim: false, strategy: "Human", versions: [] },
+    ]),
+  );
   const cfg = { ...DEFAULT_CONFIG, halfLifeHours: Infinity, marketMaxShare: 1 };
   // Mean predicted bid over letters, mid-match, relative to the truth.
   const meanBias = (q: BidParams) => {
@@ -236,5 +268,8 @@ test("runner-up EM removes the downward bias of plain censoring with many bidder
   // Plain censoring explains "<= paid" partly with skipped letters, so it
   // reads bids low; EM's runner-up step recovers most of the gap.
   assert.ok(meanBias(plain) < -0.1, `plain censoring should read low, got ${meanBias(plain)}`);
-  assert.ok(Math.abs(meanBias(em)) < Math.abs(meanBias(plain)) / 2, `em ${meanBias(em)} vs plain ${meanBias(plain)}`);
+  assert.ok(
+    Math.abs(meanBias(em)) < Math.abs(meanBias(plain)) / 2,
+    `em ${meanBias(em)} vs plain ${meanBias(plain)}`,
+  );
 });

@@ -36,7 +36,19 @@ export function loadTables(db: Db, limit = 3000): RealTable[] {
   if (ids.length === 0) return [];
   const lo = ids[0]!.id;
   const want = new Set(ids.map((x) => x.id));
-  const seatsBy = new Map<number, { botId: number; isSim: boolean; strategy: string | null; score: number; balance: number; tiles: number; paid: number; left: number }[]>();
+  const seatsBy = new Map<
+    number,
+    {
+      botId: number;
+      isSim: boolean;
+      strategy: string | null;
+      score: number;
+      balance: number;
+      tiles: number;
+      paid: number;
+      left: number;
+    }[]
+  >();
   for (const r of db
     .prepare(
       `SELECT match_id, bot_id, is_sim, strategy, final_score, final_balance, won_tiles, paid_total, tiles_left
@@ -62,7 +74,9 @@ export function loadTables(db: Db, limit = 3000): RealTable[] {
   const closes = new Map<number, number[]>();
   const won = new Map<string, { vowel: number; high: number }>();
   for (const r of db
-    .prepare(`SELECT match_id, letter, winner_bot_id, closed_us FROM auction_result WHERE match_id >= ? AND deleted_us IS NULL ORDER BY match_id, closed_us`)
+    .prepare(
+      `SELECT match_id, letter, winner_bot_id, closed_us FROM auction_result WHERE match_id >= ? AND deleted_us IS NULL ORDER BY match_id, closed_us`,
+    )
     .all(lo)) {
     const m = num(r.match_id);
     if (!want.has(m)) continue;
@@ -79,7 +93,9 @@ export function loadTables(db: Db, limit = 3000): RealTable[] {
   }
   const plays = new Map<string, { len: number; at: number }[]>();
   for (const r of db
-    .prepare(`SELECT match_id, bot_id, word, played_us FROM word_play WHERE match_id >= ? AND deleted_us IS NULL`)
+    .prepare(
+      `SELECT match_id, bot_id, word, played_us FROM word_play WHERE match_id >= ? AND deleted_us IS NULL`,
+    )
     .all(lo)) {
     const m = num(r.match_id);
     if (!want.has(m)) continue;
@@ -124,7 +140,12 @@ export function loadTables(db: Db, limit = 3000): RealTable[] {
       }
       return v;
     });
-    out.push({ matchId: id, endedUs: ended, seats: seats.map(({ botId, isSim, strategy }) => ({ botId, isSim, strategy })), stats });
+    out.push({
+      matchId: id,
+      endedUs: ended,
+      seats: seats.map(({ botId, isSim, strategy }) => ({ botId, isSim, strategy })),
+      stats,
+    });
   }
   return out;
 }
@@ -139,7 +160,21 @@ export function loadRecentTables(limit = 3000, dbPath = HISTORY_DB): RealTable[]
 }
 
 /** Summary numbers reported and fitted, from summed stat vectors. */
-export const SUMMARY_KEYS = ["score", "place", "win", "tiles", "price", "coins", "words", "wordLen", "bingos", "playPhase", "vowelShare", "highShare", "left"] as const;
+export const SUMMARY_KEYS = [
+  "score",
+  "place",
+  "win",
+  "tiles",
+  "price",
+  "coins",
+  "words",
+  "wordLen",
+  "bingos",
+  "playPhase",
+  "vowelShare",
+  "highShare",
+  "left",
+] as const;
 export type SummaryKey = (typeof SUMMARY_KEYS)[number];
 
 export interface Acc {
@@ -174,7 +209,10 @@ export function summarize(a: Acc): Record<SummaryKey, number> {
 }
 
 /** Per real bot: accumulated stats over its seats in these tables. */
-export function accumulate(tables: readonly RealTable[], stats: (t: RealTable, i: number) => number[][] = (t) => t.stats): Map<number, Acc> {
+export function accumulate(
+  tables: readonly RealTable[],
+  stats: (t: RealTable, i: number) => number[][] = (t) => t.stats,
+): Map<number, Acc> {
   const out = new Map<number, Acc>();
   tables.forEach((t, ti) => {
     const st = stats(t, ti);
@@ -232,23 +270,40 @@ export interface Entrant {
  * seen in the last activeHours with at least minSeats real-opponent seats.
  */
 export function rankEntrants(
-  rows: readonly { matchId: number; botId: number; isSim: boolean; score: number; place: number; ended: number }[],
+  rows: readonly {
+    matchId: number;
+    botId: number;
+    isSim: boolean;
+    score: number;
+    place: number;
+    ended: number;
+  }[],
   until: number,
-  opts: { halfLifeHours: number; activeHours: number; minSeats: number; top: number; exclude?: ReadonlySet<number> },
+  opts: {
+    halfLifeHours: number;
+    activeHours: number;
+    minSeats: number;
+    top: number;
+    exclude?: ReadonlySet<number>;
+  },
 ): Omit<Entrant, "name" | "rating">[] {
-  const byMatch = new Map<number, typeof rows[number][]>();
+  const byMatch = new Map<number, (typeof rows)[number][]>();
   for (const r of rows) {
     let m = byMatch.get(r.matchId);
     if (!m) byMatch.set(r.matchId, (m = []));
     m.push(r);
   }
-  const acc = new Map<number, { n: number; w: number; beat: number; score: number; place: number; last: number }>();
+  const acc = new Map<
+    number,
+    { n: number; w: number; beat: number; score: number; place: number; last: number }
+  >();
   for (const seats of byMatch.values()) {
     const real = seats.filter((s) => !s.isSim);
     if (real.length < 2) continue;
     for (const s of real) {
       let beat = 0;
-      for (const o of real) if (o !== s) beat += s.score > o.score ? 1 : s.score === o.score ? 0.5 : 0;
+      for (const o of real)
+        if (o !== s) beat += s.score > o.score ? 1 : s.score === o.score ? 0.5 : 0;
       const w = 0.5 ** ((until - s.ended) / (opts.halfLifeHours * 3600e6));
       let a = acc.get(s.botId);
       if (!a) acc.set(s.botId, (a = { n: 0, w: 0, beat: 0, score: 0, place: 0, last: 0 }));
@@ -261,7 +316,12 @@ export function rankEntrants(
     }
   }
   return [...acc.entries()]
-    .filter(([id, a]) => a.n >= opts.minSeats && a.last >= until - opts.activeHours * 3600e6 && !opts.exclude?.has(id))
+    .filter(
+      ([id, a]) =>
+        a.n >= opts.minSeats &&
+        a.last >= until - opts.activeHours * 3600e6 &&
+        !opts.exclude?.has(id),
+    )
     .map(([id, a]) => ({
       id,
       seats: a.n,
@@ -283,7 +343,8 @@ export function buildField(
   const until = num(db.prepare(`SELECT max(ended_us) AS t FROM match_info`).get()?.t ?? 0);
   const from = until - windowHours * 3600e6;
   const names = new Map<number, string>();
-  for (const r of db.prepare(`SELECT id, name FROM bot`).all()) names.set(num(r.id), String(r.name));
+  for (const r of db.prepare(`SELECT id, name FROM bot`).all())
+    names.set(num(r.id), String(r.name));
   const rows = db
     .prepare(
       `SELECT s.match_id, s.bot_id, s.is_sim, s.final_score, s.place, i.ended_us FROM match_seat s JOIN match_info i ON i.match_id = s.match_id
@@ -301,7 +362,8 @@ export function buildField(
     t.bots.push(id);
     if (id) lastSeen.set(id, Math.max(lastSeen.get(id) ?? 0, ended));
   }
-  const active = (id: number) => id === 0 || (lastSeen.get(id) ?? 0) >= until - activeHours * 3600e6;
+  const active = (id: number) =>
+    id === 0 || (lastSeen.get(id) ?? 0) >= until - activeHours * 3600e6;
   const tables: { bots: number[]; weight: number }[] = [];
   for (const t of byMatch.values()) {
     if (!t.bots.every(active)) continue;
@@ -320,7 +382,8 @@ export function buildField(
   }
   for (const b of Object.values(bots)) b.weight = Number(b.weight.toFixed(4));
   const ratings = new Map<number, number | null>();
-  for (const r of db.prepare(`SELECT bot_id, rating FROM bot_stats`).all()) ratings.set(num(r.bot_id), r.rating === null ? null : num(r.rating));
+  for (const r of db.prepare(`SELECT bot_id, rating FROM bot_stats`).all())
+    ratings.set(num(r.bot_id), r.rating === null ? null : num(r.rating));
   const entrants = rankEntrants(
     rows.map((r) => ({
       matchId: num(r.match_id),
@@ -331,7 +394,13 @@ export function buildField(
       ended: num(r.ended_us),
     })),
     until,
-    { halfLifeHours: halfLifeHours * 2, activeHours, minSeats: entrantOpts.minSeats ?? 30, top: entrantOpts.top ?? 16, exclude: entrantOpts.exclude },
+    {
+      halfLifeHours: halfLifeHours * 2,
+      activeHours,
+      minSeats: entrantOpts.minSeats ?? 30,
+      top: entrantOpts.top ?? 16,
+      exclude: entrantOpts.exclude,
+    },
   ).map((e) => ({ ...e, name: names.get(e.id) ?? `#${e.id}`, rating: ratings.get(e.id) ?? null }));
   return {
     note: "Recent real seat compositions (bot ids; 0 = server sim). Replace one seat with Damo to test against the field as it plays now.",

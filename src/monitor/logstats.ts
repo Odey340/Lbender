@@ -41,7 +41,11 @@ export interface LogStats {
   lateRefines: number;
   /** refineBid ran more than 20 ms past the budget it was given. */
   refineOverruns: number;
-  refusals: { bid: Record<string, number>; word: Record<string, number>; lobby: Record<string, number> };
+  refusals: {
+    bid: Record<string, number>;
+    word: Record<string, number>;
+    lobby: Record<string, number>;
+  };
   errors: Record<string, number>;
   disconnects: number;
   timing: Rec | null;
@@ -70,7 +74,11 @@ function bump(m: Record<string, number>, k: string) {
 }
 
 /** Pure: records oldest first. */
-export function computeStats(recs: readonly Rec[], lastMatches = 10, files: string[] = []): LogStats {
+export function computeStats(
+  recs: readonly Rec[],
+  lastMatches = 10,
+  files: string[] = [],
+): LogStats {
   const matches: MatchLine[] = [];
   const quick: number[] = [];
   const refine: number[] = [];
@@ -80,7 +88,11 @@ export function computeStats(recs: readonly Rec[], lastMatches = 10, files: stri
   let late = 0;
   let overruns = 0;
   let disconnects = 0;
-  const refusals = { bid: {} as Record<string, number>, word: {} as Record<string, number>, lobby: {} as Record<string, number> };
+  const refusals = {
+    bid: {} as Record<string, number>,
+    word: {} as Record<string, number>,
+    lobby: {} as Record<string, number>,
+  };
   const errors: Record<string, number> = {};
   let timing: Rec | null = null;
   let agent: string | null = null;
@@ -186,7 +198,10 @@ export function parseLines(text: string): Rec[] {
 }
 
 /** Read the newest log files until `enoughAuctions` auctions and the match window are covered. */
-export function readLogStats(dir: string, opts: { prefix?: string; maxDays?: number; enoughAuctions?: number; lastMatches?: number } = {}): LogStats {
+export function readLogStats(
+  dir: string,
+  opts: { prefix?: string; maxDays?: number; enoughAuctions?: number; lastMatches?: number } = {},
+): LogStats {
   const prefix = opts.prefix ?? "decisions";
   let names: string[] = [];
   try {

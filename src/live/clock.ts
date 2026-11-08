@@ -136,7 +136,11 @@ export interface BudgetInput {
 }
 
 /** Local time by which a bid must leave to arrive before the close. */
-export function sendDeadlineLocal(closesAtServerMs: number, offsetMs: number, oneWayMs: number): number {
+export function sendDeadlineLocal(
+  closesAtServerMs: number,
+  offsetMs: number,
+  oneWayMs: number,
+): number {
   return closesAtServerMs + offsetMs - oneWayMs;
 }
 
@@ -145,7 +149,9 @@ export function sendDeadlineLocal(closesAtServerMs: number, offsetMs: number, on
  * the safety margin. Negative means don't refine.
  */
 export function refineBudgetMs(b: BudgetInput): number {
-  return sendDeadlineLocal(b.closesAtServerMs, b.offsetMs, b.oneWayMs) - b.nowLocalMs - b.safetyMarginMs;
+  return (
+    sendDeadlineLocal(b.closesAtServerMs, b.offsetMs, b.oneWayMs) - b.nowLocalMs - b.safetyMarginMs
+  );
 }
 
 /**

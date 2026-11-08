@@ -20,7 +20,16 @@ const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
 function rows(): TournamentRows {
   return {
-    tournaments: [{ id: 7n, status: { tag: "Final" }, swissRoundsTotal: 3, currentRound: 0, topCut: 4, matchSize: 6 }],
+    tournaments: [
+      {
+        id: 7n,
+        status: { tag: "Final" },
+        swissRoundsTotal: 3,
+        currentRound: 0,
+        topCut: 4,
+        matchSize: 6,
+      },
+    ],
     entries: [
       { tournamentId: 7n, botId: 13n, swissPoints: 14, eliminated: false, totalScore: 900n },
       { tournamentId: 7n, botId: 22n, swissPoints: 15, eliminated: false, totalScore: 950n },
@@ -55,7 +64,10 @@ test("context builder: ladder match gives undefined, standings are sorted and sc
   const v = tournamentContext(100n, 13n, rows())!;
   assert.equal(v.phase, "Swiss");
   assert.equal(v.matchSize, 6);
-  assert.deepEqual(v.standings.map((x) => x.botId), [22, 13, 59]);
+  assert.deepEqual(
+    v.standings.map((x) => x.botId),
+    [22, 13, 59],
+  );
   assert.equal(v.standings[0]!.totalScore, 950);
   assert.equal(v.finalTotals, undefined);
 });
@@ -75,7 +87,10 @@ test("context builder: final totals sum only the earlier final games", () => {
 test("no tournament: stageView is placeView", () => {
   const me = s(1, 60);
   const rivals = [s(2, 62), s(3, 120)];
-  assert.deepEqual(stageView({ myBotId: 1 }, me, rivals, 0.4, 0.5, P), placeView(me, rivals, 0.4, 0.5, P));
+  assert.deepEqual(
+    stageView({ myBotId: 1 }, me, rivals, 0.4, 0.5, P),
+    placeView(me, rivals, 0.4, 0.5, P),
+  );
 });
 
 test("Swiss: rivals matter like place, but a decided oversized table stops paying", () => {
@@ -128,6 +143,11 @@ test("stageWeights reads the view: Final with a deficit from earlier games tilts
   assert.deepEqual(w.rivalIds, [22]);
   assert.deepEqual(w.rivalWeights, [1]);
   assert.ok(w.tilt < 0, `leading by 50 after game 1: ${w.tilt}`);
-  const swiss = stageWeights({ ...view, tournament: tournamentContext(100n, 13n, rows())! }, 0.4, 0.5, P);
+  const swiss = stageWeights(
+    { ...view, tournament: tournamentContext(100n, 13n, rows())! },
+    0.4,
+    0.5,
+    P,
+  );
   assert.equal(swiss.rivalWeights.length, 1);
 });

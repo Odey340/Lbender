@@ -43,11 +43,18 @@ const REPO = path.join(import.meta.dirname, "..", "..");
 const UPSTREAM = process.env.DAMO_UPSTREAM
   ? path.resolve(process.env.DAMO_UPSTREAM)
   : path.join(REPO, "..", "scrabblebot", "spacetimedb");
-const SPACETIME = process.env.SPACETIME_BIN ?? path.join(os.homedir(), ".local", "bin", "spacetime");
+const SPACETIME =
+  process.env.SPACETIME_BIN ?? path.join(os.homedir(), ".local", "bin", "spacetime");
 const HOST = "127.0.0.1:3013";
 const URI = `http://${HOST}`;
-const REPLICAS = path.join(process.env.DAMO_STDB_DATA ?? path.join(os.homedir(), ".local", "share", "k13", "stdb"), "replicas");
-const PROTECTED_TREES = (process.env.DAMO_PROTECTED_TREES ?? "").split(":").filter(Boolean).map((t) => path.resolve(t));
+const REPLICAS = path.join(
+  process.env.DAMO_STDB_DATA ?? path.join(os.homedir(), ".local", "share", "k13", "stdb"),
+  "replicas",
+);
+const PROTECTED_TREES = (process.env.DAMO_PROTECTED_TREES ?? "")
+  .split(":")
+  .filter(Boolean)
+  .map((t) => path.resolve(t));
 const DEFAULT_FILLERS = "clone:59,clone:12,clone:67,clone:45,clone:102,clone:115,clone:69";
 
 // ---------- args ----------
@@ -88,7 +95,25 @@ function parseArgs(argv: string[]): Args {
       m.set(f.slice(2), v);
     }
   }
-  const known = ["tree", "filler-tree", "swiss", "cut", "size", "auction", "fillers", "rack", "auction-ms", "register", "db", "work", "out", "timeout-min", "finals-delay-ms", "reg-timeout", "k13-args"];
+  const known = [
+    "tree",
+    "filler-tree",
+    "swiss",
+    "cut",
+    "size",
+    "auction",
+    "fillers",
+    "rack",
+    "auction-ms",
+    "register",
+    "db",
+    "work",
+    "out",
+    "timeout-min",
+    "finals-delay-ms",
+    "reg-timeout",
+    "k13-args",
+  ];
   for (const k of m.keys()) if (!known.includes(k)) throw new Error(`unknown flag --${k}`);
   const tree = m.get("tree");
   if (!tree) throw new Error("--tree <bot tree dir> is required");
@@ -98,12 +123,14 @@ function parseArgs(argv: string[]): Args {
     return v;
   };
   const auction = m.get("auction") ?? "Vickrey";
-  if (auction !== "Vickrey" && auction !== "FirstPrice") throw new Error("--auction must be Vickrey or FirstPrice");
+  if (auction !== "Vickrey" && auction !== "FirstPrice")
+    throw new Error("--auction must be Vickrey or FirstPrice");
   const register = m.get("register") ?? "tid";
   if (register !== "tid" && register !== "auto") throw new Error("--register must be tid or auto");
   const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(4, 12); // MMDDHHMM
   const db = m.get("db") ?? `sbrehearsal${stamp}${Math.floor(Math.random() * 90 + 10)}`;
-  if (!/^sbrehearsal[a-z0-9-]*$/.test(db)) throw new Error("--db must start with sbrehearsal (lowercase letters, digits, dashes)");
+  if (!/^sbrehearsal[a-z0-9-]*$/.test(db))
+    throw new Error("--db must start with sbrehearsal (lowercase letters, digits, dashes)");
   return {
     tree: path.resolve(tree),
     fillerTree: path.resolve(m.get("filler-tree") ?? tree),
@@ -111,7 +138,10 @@ function parseArgs(argv: string[]): Args {
     cut: num("cut", 3),
     size: num("size", 4),
     auction,
-    fillers: (m.get("fillers") ?? DEFAULT_FILLERS).split(",").map((s) => s.trim()).filter(Boolean),
+    fillers: (m.get("fillers") ?? DEFAULT_FILLERS)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
     rack: num("rack", 5),
     auctionMs: num("auction-ms", 1000),
     register,
@@ -158,7 +188,11 @@ function cli(config: string, args: string[], timeout = 180_000): string {
 }
 
 function makeCliConfig(file: string) {
-  fs.writeFileSync(file, `default_server = "k13"\n\n[[server_configs]]\nnickname = "k13"\nhost = "${HOST}"\nprotocol = "http"\n`, { mode: 0o600 });
+  fs.writeFileSync(
+    file,
+    `default_server = "k13"\n\n[[server_configs]]\nnickname = "k13"\nhost = "${HOST}"\nprotocol = "http"\n`,
+    { mode: 0o600 },
+  );
   cli(file, ["login", "--server-issued-login", "k13"], 30_000);
   fs.chmodSync(file, 0o600);
 }
@@ -167,11 +201,22 @@ function prepareModule(work: string): string {
   const dir = path.join(work, "module");
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  execFileSync("rsync", ["-a", "--exclude", "node_modules", "--exclude", "dist", `${UPSTREAM}/`, `${dir}/`]);
+  execFileSync("rsync", [
+    "-a",
+    "--exclude",
+    "node_modules",
+    "--exclude",
+    "dist",
+    `${UPSTREAM}/`,
+    `${dir}/`,
+  ]);
   fs.symlinkSync(path.join(UPSTREAM, "node_modules"), path.join(dir, "node_modules"));
   const game = path.join(dir, "src", "game.ts");
   const src = fs.readFileSync(game, "utf8");
-  const patched = src.replace(/(export const SEED_ADMIN_HEX: readonly string\[\] = \[)[\s\S]*?(\];)/, "$1\n  // rehearsal copy: no seed admins, so bootstrap_admin works\n$2");
+  const patched = src.replace(
+    /(export const SEED_ADMIN_HEX: readonly string\[\] = \[)[\s\S]*?(\];)/,
+    "$1\n  // rehearsal copy: no seed admins, so bootstrap_admin works\n$2",
+  );
   if (patched === src) throw new Error("could not find SEED_ADMIN_HEX in the module copy");
   fs.writeFileSync(game, patched);
   return dir;
@@ -195,7 +240,10 @@ function findOurReplica(before: Set<string>, fromMs: number, toMs: number): stri
       const ts = Date.parse(/timestamp_utc=([^\s;]+)/.exec(lock)?.[1] ?? "");
       if (!(ts >= fromMs - 2000 && ts <= toMs + 2000)) continue;
       const logs = path.join(REPLICAS, d, "module_logs");
-      const text = fs.readdirSync(logs).map((f) => fs.readFileSync(path.join(logs, f), "utf8").slice(0, 200_000)).join("");
+      const text = fs
+        .readdirSync(logs)
+        .map((f) => fs.readFileSync(path.join(logs, f), "utf8").slice(0, 200_000))
+        .join("");
       if (text.includes("Creating table `credential_nonce`")) hits.push(d);
     } catch {
       /* not ours or unreadable */
@@ -242,7 +290,11 @@ function subscribe(conn: DbConnection, queries: string[]): Promise<void> {
   });
 }
 
-async function waitFor<T>(what: string, ms: number, f: () => T | undefined | null | false): Promise<T> {
+async function waitFor<T>(
+  what: string,
+  ms: number,
+  f: () => T | undefined | null | false,
+): Promise<T> {
   const end = Date.now() + ms;
   for (;;) {
     const v = f();
@@ -283,14 +335,30 @@ function launch(b: BotRun, a: Args, nonce: string, tournamentId: bigint) {
   delete env.TOURNAMENT_ID;
   if (!b.k13 || a.register === "tid") env.TOURNAMENT_ID = String(tournamentId);
   const tsx = path.join(b.tree, "node_modules", ".bin", "tsx");
-  const args = ["-n", b.k13 ? "5" : "15", tsx, "src/bot.ts", "--agent", b.agent, ...(b.k13 ? a.k13Args : [])];
-  const child = spawn("nice", args, { cwd: b.tree, env, detached: true, stdio: ["ignore", out, out] });
+  const args = [
+    "-n",
+    b.k13 ? "5" : "15",
+    tsx,
+    "src/bot.ts",
+    "--agent",
+    b.agent,
+    ...(b.k13 ? a.k13Args : []),
+  ];
+  const child = spawn("nice", args, {
+    cwd: b.tree,
+    env,
+    detached: true,
+    stdio: ["ignore", out, out],
+  });
   fs.closeSync(out);
   b.child = child;
   b.startedAt = Date.now();
   child.on("exit", (code, signal) => {
     b.exited = { code, signal, at: utc() };
-    if (!stopping) problem(`bot ${b.name} (${b.agent}) exited: code ${code} signal ${signal}; tail: ${tail(path.join(b.logDir, "stdout.log"), 3)}`);
+    if (!stopping)
+      problem(
+        `bot ${b.name} (${b.agent}) exited: code ${code} signal ${signal}; tail: ${tail(path.join(b.logDir, "stdout.log"), 3)}`,
+      );
   });
 }
 
@@ -358,16 +426,33 @@ function pctl(xs: number[], p: number): number | null {
 
 function analyseK13(dir: string): K13Stats {
   const st: K13Stats = {
-    auctions: 0, misses: 0, noSendAuctions: 0, refusedSends: {}, minSlackMs: null, quickMsP99: null, refineMsP99: null,
-    wordsOk: 0, wordsRefused: {}, lobbyJoinsOk: 0, lobbyRefused: {}, register: [], errors: [], warnings: 0,
-    matchStarts: [], matchEnds: [], auctionsByMatch: {},
+    auctions: 0,
+    misses: 0,
+    noSendAuctions: 0,
+    refusedSends: {},
+    minSlackMs: null,
+    quickMsP99: null,
+    refineMsP99: null,
+    wordsOk: 0,
+    wordsRefused: {},
+    lobbyJoinsOk: 0,
+    lobbyRefused: {},
+    register: [],
+    errors: [],
+    warnings: 0,
+    matchStarts: [],
+    matchEnds: [],
+    auctionsByMatch: {},
   };
   const quick: number[] = [];
   const refine: number[] = [];
   const bump = (o: Record<string, number>, k: string) => (o[k] = (o[k] ?? 0) + 1);
   let files: string[] = [];
   try {
-    files = fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl")).map((f) => path.join(dir, f));
+    files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".jsonl"))
+      .map((f) => path.join(dir, f));
   } catch {
     /* none */
   }
@@ -388,11 +473,14 @@ function analyseK13(dir: string): K13Stats {
           st.misses += Number(r.misses ?? 0);
           if (typeof r.quickMs === "number") quick.push(r.quickMs);
           if (typeof r.refineMs === "number") refine.push(r.refineMs);
-          const sends = (r.sends as { ok?: boolean; err?: string; slackMs?: number }[] | undefined) ?? [];
+          const sends =
+            (r.sends as { ok?: boolean; err?: string; slackMs?: number }[] | undefined) ?? [];
           if (!sends.length) st.noSendAuctions++;
           for (const s of sends) {
             if (s.ok === false) bump(st.refusedSends, String(s.err ?? "?").slice(0, 80));
-            if (typeof s.slackMs === "number") st.minSlackMs = st.minSlackMs === null ? s.slackMs : Math.min(st.minSlackMs, s.slackMs);
+            if (typeof s.slackMs === "number")
+              st.minSlackMs =
+                st.minSlackMs === null ? s.slackMs : Math.min(st.minSlackMs, s.slackMs);
           }
           break;
         }
@@ -414,7 +502,12 @@ function analyseK13(dir: string): K13Stats {
           st.matchStarts.push(Number(r.match));
           break;
         case "match_end":
-          st.matchEnds.push({ match: Number(r.match), place: Number(r.place), seats: Number(r.seats), score: Number(r.score) });
+          st.matchEnds.push({
+            match: Number(r.match),
+            place: Number(r.place),
+            seats: Number(r.seats),
+            score: Number(r.score),
+          });
           break;
       }
     }
@@ -422,7 +515,10 @@ function analyseK13(dir: string): K13Stats {
   st.quickMsP99 = pctl(quick, 0.99);
   st.refineMsP99 = pctl(refine, 0.99);
   try {
-    st.warnings = fs.readFileSync(path.join(dir, "stdout.log"), "utf8").split("\n").filter((l) => /WARN|uncaught|unhandled|fatal/i.test(l)).length;
+    st.warnings = fs
+      .readFileSync(path.join(dir, "stdout.log"), "utf8")
+      .split("\n")
+      .filter((l) => /WARN|uncaught|unhandled|fatal/i.test(l)).length;
   } catch {
     /* none */
   }
@@ -450,14 +546,24 @@ async function main() {
   for (const t of [a.tree, a.fillerTree]) {
     if (!fs.existsSync(path.join(t, "src", "bot.ts"))) throw new Error(`${t} has no src/bot.ts`);
     if (PROTECTED_TREES.some((p) => path.resolve(t).startsWith(p))) {
-      throw new Error("refusing to run bots from a protected (deployed) tree (they write token files); rsync a copy first");
+      throw new Error(
+        "refusing to run bots from a protected (deployed) tree (they write token files); rsync a copy first",
+      );
     }
   }
-  say(`db ${a.db}, tree ${a.tree}, ${a.fillers.length} fillers, swiss ${a.swiss}, cut ${a.cut}, size ${a.size}, ${a.auction}, rack ${a.rack}, ${a.auctionMs} ms`);
+  say(
+    `db ${a.db}, tree ${a.tree}, ${a.fillers.length} fillers, swiss ${a.swiss}, cut ${a.cut}, size ${a.size}, ${a.auction}, rack ${a.rack}, ${a.auctionMs} ms`,
+  );
 
   const tag = a.db.replace(/^sbrehearsal/, "").slice(-6) || "x";
   const bots: BotRun[] = [
-    { name: `K13-${tag}`, agent: "palace", k13: true, tree: a.tree, logDir: path.join(a.out, `K13-${tag}`) },
+    {
+      name: `K13-${tag}`,
+      agent: "palace",
+      k13: true,
+      tree: a.tree,
+      logDir: path.join(a.out, `K13-${tag}`),
+    },
     ...a.fillers.map((f, i) => {
       const name = `f${i + 1}-${f.replace(/[^a-z0-9]/gi, "")}-${tag}`.slice(0, 32);
       return { name, agent: f, k13: false, tree: a.fillerTree, logDir: path.join(a.out, name) };
@@ -539,12 +645,28 @@ async function main() {
       "SELECT * FROM word_play",
     ]);
     const lobbyMax = Math.min(12, Math.floor(97 / Math.max(a.rack, 1)));
-    if (lobbyMax <= bots.length) say(`note: lobby size ${lobbyMax} <= ${bots.length} entrants; idle bots may fill a casual match`);
-    await conn.reducers.setMatchmakerConfig({ startingRackSize: a.rack, lobbyMaxSize: lobbyMax, auctionDurationMs: BigInt(a.auctionMs) });
-    await conn.reducers.createTournament({ swissRoundsTotal: a.swiss, topCut: a.cut, matchSize: a.size, auctionType: { tag: a.auction } });
-    const tour = await waitFor("tournament row", 5000, () => [...conn.db.tournament.iter()].find((t) => t.status.tag === "Registration"));
+    if (lobbyMax <= bots.length)
+      say(
+        `note: lobby size ${lobbyMax} <= ${bots.length} entrants; idle bots may fill a casual match`,
+      );
+    await conn.reducers.setMatchmakerConfig({
+      startingRackSize: a.rack,
+      lobbyMaxSize: lobbyMax,
+      auctionDurationMs: BigInt(a.auctionMs),
+    });
+    await conn.reducers.createTournament({
+      swissRoundsTotal: a.swiss,
+      topCut: a.cut,
+      matchSize: a.size,
+      auctionType: { tag: a.auction },
+    });
+    const tour = await waitFor("tournament row", 5000, () =>
+      [...conn.db.tournament.iter()].find((t) => t.status.tag === "Registration"),
+    );
     const tid = tour.id;
-    say(`admin ${admin.identity.toHexString().slice(0, 12)}…, tournament ${tid} created (Registration)`);
+    say(
+      `admin ${admin.identity.toHexString().slice(0, 12)}…, tournament ${tid} created (Registration)`,
+    );
 
     // 3. teams + nonces, one fresh human identity per team
     const nonces = new Map<string, string>();
@@ -556,7 +678,11 @@ async function main() {
           await subscribe(h.conn, ["SELECT * FROM my_nonces"]);
           await h.conn.reducers.createTeam({ teamName: `team-${b.name}`, botName: b.name });
           await h.conn.reducers.mintCredentialNonce({});
-          const n = await waitFor(`nonce for ${b.name}`, 10_000, () => [...h.conn.db.myNonces.iter()][0]);
+          const n = await waitFor(
+            `nonce for ${b.name}`,
+            10_000,
+            () => [...h.conn.db.myNonces.iter()][0],
+          );
           nonces.set(b.name, n.code);
           b.botId = n.botId;
         } finally {
@@ -579,14 +705,20 @@ async function main() {
     // real bots fill it at once, so wait for one created after the config.
     const openLobby = () => [...conn.db.lobby.iter()].find((x) => x.status.tag === "Open");
     if (lobbyLeft() < 60_000 || (openLobby()?.maxSize ?? 0) < lobbyMax) {
-      say(`open lobby (size ${openLobby()?.maxSize}) closes in ${Math.round(lobbyLeft() / 1000)} s; waiting for the next one`);
+      say(
+        `open lobby (size ${openLobby()?.maxSize}) closes in ${Math.round(lobbyLeft() / 1000)} s; waiting for the next one`,
+      );
       const cur = [...conn.db.lobby.iter()].find((x) => x.status.tag === "Open")?.id;
-      await waitFor("a fresh lobby", 100_000, () => [...conn.db.lobby.iter()].some((x) => x.status.tag === "Open" && x.id !== cur));
+      await waitFor("a fresh lobby", 100_000, () =>
+        [...conn.db.lobby.iter()].some((x) => x.status.tag === "Open" && x.id !== cur),
+      );
     }
 
     // 4. launch
     for (const b of bots) launch(b, a, nonces.get(b.name)!, tid);
-    say(`launched ${bots.length} bots (Damo registers via ${a.register === "tid" ? "TOURNAMENT_ID" : "its own auto-registration"})`);
+    say(
+      `launched ${bots.length} bots (Damo registers via ${a.register === "tid" ? "TOURNAMENT_ID" : "its own auto-registration"})`,
+    );
     const regAt = new Map<string, number>();
     const regEnd = Date.now() + a.regTimeoutS * 1000;
     for (;;) {
@@ -599,16 +731,26 @@ async function main() {
       }
       if (regAt.size === bots.length) break;
       if (Date.now() > regEnd) {
-        problem(`not registered after ${a.regTimeoutS} s: ${bots.filter((b) => !regAt.has(b.name)).map((b) => b.name).join(", ")}`);
+        problem(
+          `not registered after ${a.regTimeoutS} s: ${bots
+            .filter((b) => !regAt.has(b.name))
+            .map((b) => b.name)
+            .join(", ")}`,
+        );
         break;
       }
       await sleep(250);
     }
     // Sim-only lobby matches don't hold anything up; ones with an entrant do.
     const casual = [...conn.db.matchState.iter()].filter(
-      (m) => m.status.tag === "Running" && [...conn.db.matchParticipant.mpByMatch.filter(m.id)].some((p) => byId.has(p.botId)),
+      (m) =>
+        m.status.tag === "Running" &&
+        [...conn.db.matchParticipant.mpByMatch.filter(m.id)].some((p) => byId.has(p.botId)),
     );
-    if (casual.length) say(`entrants in casual matches before the start: ${casual.map((m) => m.id).join(", ")} (round 1 will wait)`);
+    if (casual.length)
+      say(
+        `entrants in casual matches before the start: ${casual.map((m) => m.id).join(", ")} (round 1 will wait)`,
+      );
 
     // 5. start and drive
     const startAt = Date.now();
@@ -633,7 +775,9 @@ async function main() {
       }
       const status = t.status.tag;
       if (status !== lastStatus) {
-        const alive = [...conn.db.tournamentEntry.iter()].filter((e) => !e.eliminated).map((e) => nameOf(e.botId));
+        const alive = [...conn.db.tournamentEntry.iter()]
+          .filter((e) => !e.eliminated)
+          .map((e) => nameOf(e.botId));
         say(`STAGE ${status} (alive: ${alive.join(", ")})`);
         lastStatus = status;
       }
@@ -641,9 +785,16 @@ async function main() {
       for (const tm of conn.db.tournamentMatch.iter()) {
         if (seenTm.has(tm.matchId)) continue;
         seenTm.add(tm.matchId);
-        const seats = [...conn.db.matchParticipant.mpByMatch.filter(tm.matchId)].map((p) => nameOf(p.botId));
-        say(`match ${tm.matchId} started: ${tm.phase.tag} round ${tm.round}, ${seats.length} seats: ${seats.join(", ")}`);
-        if (!seats.includes(k13.name) && [...conn.db.tournamentEntry.iter()].some((e) => e.botId === k13.botId && !e.eliminated)) {
+        const seats = [...conn.db.matchParticipant.mpByMatch.filter(tm.matchId)].map((p) =>
+          nameOf(p.botId),
+        );
+        say(
+          `match ${tm.matchId} started: ${tm.phase.tag} round ${tm.round}, ${seats.length} seats: ${seats.join(", ")}`,
+        );
+        if (
+          !seats.includes(k13.name) &&
+          [...conn.db.tournamentEntry.iter()].some((e) => e.botId === k13.botId && !e.eliminated)
+        ) {
           if (tm.phase.tag === "Swiss") say(`note: Damo not at this table`);
         }
       }
@@ -663,9 +814,22 @@ async function main() {
           }))
           .sort((x, y) => x.place - y.place);
         const auctions = [...conn.db.auctionResult.resultByMatch.filter(tm.matchId)].length;
-        const k13Words7 = [...conn.db.wordPlay.playByMatch.filter(tm.matchId)].filter((w) => w.botId === k13.botId && w.word.length >= 7).length;
-        const durationS = ms.startedAt && ms.endedAt ? Number(ms.endedAt.microsSinceUnixEpoch - ms.startedAt.microsSinceUnixEpoch) / 1e6 : 0;
-        const rep: MatchReport = { matchId: Number(tm.matchId), phase: tm.phase.tag, round: tm.round, seats, auctions, k13Words7, durationS };
+        const k13Words7 = [...conn.db.wordPlay.playByMatch.filter(tm.matchId)].filter(
+          (w) => w.botId === k13.botId && w.word.length >= 7,
+        ).length;
+        const durationS =
+          ms.startedAt && ms.endedAt
+            ? Number(ms.endedAt.microsSinceUnixEpoch - ms.startedAt.microsSinceUnixEpoch) / 1e6
+            : 0;
+        const rep: MatchReport = {
+          matchId: Number(tm.matchId),
+          phase: tm.phase.tag,
+          round: tm.round,
+          seats,
+          auctions,
+          k13Words7,
+          durationS,
+        };
         reports.push(rep);
         const me = seats.find((s) => s.k13);
         let extra = "";
@@ -695,25 +859,39 @@ async function main() {
         const pr = progress.get(mId);
         if (!pr || pr.n !== n) progress.set(mId, { n, at: Date.now() });
         else if (Date.now() - pr.at > 5000 + 10 * a.auctionMs && pr.at > 0) {
-          problem(`match ${mId} stuck: no auction closed for ${Math.round((Date.now() - pr.at) / 1000)} s`);
+          problem(
+            `match ${mId} stuck: no auction closed for ${Math.round((Date.now() - pr.at) / 1000)} s`,
+          );
           pr.at = 0;
         }
       }
       // Registered bots offline.
       for (const b of bots) {
-        const creds = b.botId !== undefined ? [...conn.db.botCredential.credByBot.filter(b.botId)] : [];
+        const creds =
+          b.botId !== undefined ? [...conn.db.botCredential.credByBot.filter(b.botId)] : [];
         const online = creds.some((c) => c.connected);
         if (!online && creds.length && !offlineSeen.has(b.name)) {
           offlineSeen.add(b.name);
           problem(`bot ${b.name} is offline (no connected credential)`);
         } else if (online) offlineSeen.delete(b.name);
       }
-      if (status === "Swiss" && t.currentRound === 0 && !stalledRound1 && Date.now() - startAt > 120_000) {
+      if (
+        status === "Swiss" &&
+        t.currentRound === 0 &&
+        !stalledRound1 &&
+        Date.now() - startAt > 120_000
+      ) {
         stalledRound1 = true;
-        problem("round 1 hasn't started 120 s after start_tournament (an entrant still in a casual match?)");
+        problem(
+          "round 1 hasn't started 120 s after start_tournament (an entrant still in a casual match?)",
+        );
       }
       // Drive the finals: the admin starts each match, a short pause after the last one ended.
-      const finalsIdle = (status === "Bracket" || status === "Final") && ![...conn.db.tournamentMatch.iter()].some((m) => conn.db.matchState.id.find(m.matchId)?.status.tag === "Running");
+      const finalsIdle =
+        (status === "Bracket" || status === "Final") &&
+        ![...conn.db.tournamentMatch.iter()].some(
+          (m) => conn.db.matchState.id.find(m.matchId)?.status.tag === "Running",
+        );
       if (!finalsIdle) idleSince = 0;
       else if (idleSince === 0) idleSince = Date.now();
       else if (Date.now() - idleSince >= a.finalsDelayMs && Date.now() - lastFinalsCall > 3000) {
@@ -740,20 +918,29 @@ async function main() {
     // 6. results
     const t = conn.db.tournament.id.find(tid);
     const entries = [...conn.db.tournamentEntry.iter()].sort(
-      (x, y) => (x.finalFinishPosition ?? 99) - (y.finalFinishPosition ?? 99) || y.swissPoints - x.swissPoints || Number(y.totalScore - x.totalScore),
+      (x, y) =>
+        (x.finalFinishPosition ?? 99) - (y.finalFinishPosition ?? 99) ||
+        y.swissPoints - x.swissPoints ||
+        Number(y.totalScore - x.totalScore),
     );
     const champion = t?.winnerBotId !== undefined ? nameOf(t.winnerBotId) : null;
     const k13Entry = entries.find((e) => e.botId === k13.botId);
-    say(`tournament ${t?.status.tag}; champion ${champion ?? "-"}; ${Math.round((Date.now() - startAt) / 1000)} s after start`);
+    say(
+      `tournament ${t?.status.tag}; champion ${champion ?? "-"}; ${Math.round((Date.now() - startAt) / 1000)} s after start`,
+    );
     // Damo in casual matches after elimination (lobby use)
-    const k13Matches = [...conn.db.matchParticipant.mpByBot.filter(k13.botId!)].map((p) => p.matchId);
+    const k13Matches = [...conn.db.matchParticipant.mpByBot.filter(k13.botId!)].map(
+      (p) => p.matchId,
+    );
     const casualK13 = k13Matches.filter((m) => !seenTm.has(m));
     await sleep(3000); // let bot logs flush
     const stats = analyseK13(k13.logDir);
     for (const m of reports.filter((r) => r.seats.some((s) => s.k13))) {
       const logged = stats.auctionsByMatch[m.matchId] ?? 0;
-      if (!stats.matchStarts.includes(m.matchId)) problem(`Damo log has no match_start for its tournament match ${m.matchId}`);
-      if (logged < m.auctions) problem(`Damo logged ${logged} auctions of ${m.auctions} in match ${m.matchId}`);
+      if (!stats.matchStarts.includes(m.matchId))
+        problem(`Damo log has no match_start for its tournament match ${m.matchId}`);
+      if (logged < m.auctions)
+        problem(`Damo logged ${logged} auctions of ${m.auctions} in match ${m.matchId}`);
     }
     summary = {
       db: a.db,
@@ -791,7 +978,10 @@ async function main() {
     }
   }
   summary.events = events;
-  fs.writeFileSync(path.join(a.out, "summary.json"), JSON.stringify(summary, (_k, v) => (typeof v === "bigint" ? Number(v) : v), 2));
+  fs.writeFileSync(
+    path.join(a.out, "summary.json"),
+    JSON.stringify(summary, (_k, v) => (typeof v === "bigint" ? Number(v) : v), 2),
+  );
   fs.writeFileSync(path.join(a.out, "report.md"), renderReport(summary));
   console.log(`[rehearse] report: ${path.join(a.out, "report.md")}`);
   process.exit(problems.some((p) => /aborted/.test(p)) ? 1 : 0);
@@ -801,7 +991,8 @@ function renderReport(s: Record<string, unknown>): string {
   const k = s.k13 as Record<string, unknown> | undefined;
   const lines = [`# Tournament rehearsal ${s.db}`, ""];
   const tour = s.tournament as Record<string, unknown> | undefined;
-  if (tour) lines.push(`Tournament ${tour.id}: ${tour.status}, champion ${tour.champion ?? "-"}.`, "");
+  if (tour)
+    lines.push(`Tournament ${tour.id}: ${tour.status}, champion ${tour.champion ?? "-"}.`, "");
   if (k) {
     lines.push(
       `Damo (${k.name}, bot ${k.botId}): Swiss points ${k.swissPoints}, total score ${k.totalScore}, finish ${k.finalFinishPosition ?? "-"}, eliminated ${k.eliminated}, final diff ${k.finalDiff}.`,
@@ -823,13 +1014,24 @@ function renderReport(s: Record<string, unknown>): string {
   }
   lines.push("## Matches", "");
   for (const m of (s.matches as MatchReport[] | undefined) ?? []) {
-    lines.push(`- ${m.matchId} ${m.phase} r${m.round} (${m.auctions} auctions, ${m.durationS.toFixed(0)} s): ${m.seats.map((x) => `${x.place}. ${x.k13 ? "**" : ""}${x.name}${x.k13 ? "**" : ""} ${x.score}`).join(", ")}`);
+    lines.push(
+      `- ${m.matchId} ${m.phase} r${m.round} (${m.auctions} auctions, ${m.durationS.toFixed(0)} s): ${m.seats.map((x) => `${x.place}. ${x.k13 ? "**" : ""}${x.name}${x.k13 ? "**" : ""} ${x.score}`).join(", ")}`,
+    );
   }
   lines.push("", "## Standings", "");
   for (const e of (s.standings as Record<string, unknown>[] | undefined) ?? []) {
-    lines.push(`- ${e.name}: ${e.swissPoints} pt, total ${e.totalScore}, finish ${e.finish ?? "-"}${e.eliminated ? ", eliminated" : ""}`);
+    lines.push(
+      `- ${e.name}: ${e.swissPoints} pt, total ${e.totalScore}, finish ${e.finish ?? "-"}${e.eliminated ? ", eliminated" : ""}`,
+    );
   }
-  lines.push("", "## Problems", "", ...(((s.problems as string[]) ?? []).length ? (s.problems as string[]).map((p) => `- ${p}`) : ["- none"]));
+  lines.push(
+    "",
+    "## Problems",
+    "",
+    ...(((s.problems as string[]) ?? []).length
+      ? (s.problems as string[]).map((p) => `- ${p}`)
+      : ["- none"]),
+  );
   lines.push("", "## Timeline", "", "```", ...((s.events as string[]) ?? []), "```", "");
   return lines.join("\n");
 }

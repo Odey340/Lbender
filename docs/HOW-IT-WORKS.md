@@ -15,9 +15,9 @@ From [`src/core/rules.ts`](../src/core/rules.ts), which mirrors the server:
 - **Vickrey** (the default): the highest bid wins and pays the **second-highest** bid. A lone bidder pays 1. Ties are broken at random. A letter nobody bids on is discarded.
 - A word scores the sum of its letter values (standard Scrabble values: A = 1, H = 4, Q = 10, ...) times a length multiplier, rounded down:
 
-| Word length | 2–3 | 4 | 5 | 6 | 7+ |
-|---|---|---|---|---|---|
-| Multiplier | 1x | 1.5x | 2x | 2.5x | **3x** |
+| Word length | 2–3 | 4    | 5   | 6    | 7+     |
+| ----------- | --- | ---- | --- | ---- | ------ |
+| Multiplier  | 1x  | 1.5x | 2x  | 2.5x | **3x** |
 
 - The reward goes to **both** score and coins, so a word also funds future bids.
 - The match ends the instant the bag is empty. A live bot cannot play after that, so leftover tiles and leftover coins are worth nothing.
@@ -28,18 +28,18 @@ From [`src/core/rules.ts`](../src/core/rules.ts), which mirrors the server:
 
 Everything K-13 knows comes from public tables it subscribes to, plus its own rack:
 
-| K-13 can see | K-13 cannot see |
-|---|---|
-| The letter on the block and when the auction closes | Anyone's bid in the current auction |
-| Its own rack and balance | Other bots' starting tiles (until they play them) |
-| Every seat's score, balance and rack size | Which letters are left in the bag, exactly |
-| Every past auction: letter, winner, price paid | |
-| Every word played so far | |
-| After a match ends: the winning bid of each auction (public archive) | |
+| K-13 can see                                                         | K-13 cannot see                                   |
+| -------------------------------------------------------------------- | ------------------------------------------------- |
+| The letter on the block and when the auction closes                  | Anyone's bid in the current auction               |
+| Its own rack and balance                                             | Other bots' starting tiles (until they play them) |
+| Every seat's score, balance and rack size                            | Which letters are left in the bag, exactly        |
+| Every past auction: letter, winner, price paid                       |                                                   |
+| Every word played so far                                             |                                                   |
+| After a match ends: the winning bid of each auction (public archive) |                                                   |
 
 It never reads `visible_auction_top_bids`, the live top-bid view the game hides from bots. See [Fair play](../README.md#fair-play).
 
-**Belief about hidden tiles** ([`src/brain/belief.ts`](../src/brain/belief.ts)). K-13 starts from the full bag, removes every letter that has been auctioned, removes its own tiles, and removes any opponent starting tile that a word has revealed (a bot that plays two Es after buying one must have started with one). What is left is the *unseen pool*: the bag plus everyone's unrevealed starting tiles. Future auction letters are draws from this pool.
+**Belief about hidden tiles** ([`src/brain/belief.ts`](../src/brain/belief.ts)). K-13 starts from the full bag, removes every letter that has been auctioned, removes its own tiles, and removes any opponent starting tile that a word has revealed (a bot that plays two Es after buying one must have started with one). What is left is the _unseen pool_: the bag plus everyone's unrevealed starting tiles. Future auction letters are draws from this pool.
 
 **A quick bid goes out at once** ([`src/live/bidder.ts`](../src/live/bidder.ts)). Within a few milliseconds K-13 sends a fast estimate. If anything goes wrong later in the second, that bid still stands, because the server keeps only the latest bid from each bot.
 
@@ -50,8 +50,8 @@ It never reads `visible_auction_top_bids`, the live top-bid view the game hides 
 A letter is worth what it adds to K-13's **final** words, not to the word it could play right now. K-13 answers this by imagining futures ([`src/brain/value.ts`](../src/brain/value.ts)):
 
 1. Draw a plausible set of tiles K-13 might still buy, from the unseen pool.
-2. Find the best way to split *rack + those tiles* into dictionary words, and score it.
-3. Do the same with *rack + this letter + those tiles*.
+2. Find the best way to split _rack + those tiles_ into dictionary words, and score it.
+3. Do the same with _rack + this letter + those tiles_.
 4. The difference is the letter's value in that future. Average over many futures.
 
 Both sides of the comparison use **the same imagined futures** (common random numbers), so the noise cancels and small differences are measurable. The word search is fast: the best word for a 7-tile rack takes about 0.002 ms ([`src/core/words.ts`](../src/core/words.ts)).
@@ -63,24 +63,24 @@ Say K-13 started with S, T, O, N, E and has just won an R. Its rack is **S T O N
 What it could play right now:
 
 | Play now | Letters | Base | Multiplier | Reward | Left on rack |
-|---|---|---|---|---|---|
-| TONE | 4 | 4 | 1.5x | **6** | S, R |
-| STONE | 5 | 5 | 2x | **10** | R |
-| STONER | 6 | 6 | 2.5x | **15** | nothing |
+| -------- | ------- | ---- | ---------- | ------ | ------------ |
+| TONE     | 4       | 4    | 1.5x       | **6**  | S, R         |
+| STONE    | 5       | 5    | 2x         | **10** | R            |
+| STONER   | 6       | 6    | 2.5x       | **15** | nothing      |
 
 And what one more letter would make possible (checked against the game's dictionary, `data/wordlist.txt`):
 
-| Next letter | Best play with 7 tiles | Reward | Gain over STONER |
-|---|---|---|---|
-| A, E, I, N, O, R, S, T, U | a 7-letter word (3x), e.g. SENATOR, STONIER, TONSURE | 21 | +6 |
-| D, G | RODENTS, TONGERS (3x) | 24 | +9 |
-| B, C, M, P | SORBENT, CORNETS, MONSTER, POSTERN (3x) | 27 | +12 |
-| F, H | FRONTES, HORNETS (3x) | 30 | +15 |
-| V, W, Y | no 7-letter word; a 6-letter swap: STOVER, RESOWN, STONEY (2.5x) | 22 | +7 |
-| K | TOKENS (2.5x) | 25 | +10 |
-| J, X | JETONS, SEXTON (2.5x) | 32 | +17 |
-| Z | ZONERS (2.5x) | 37 | +22 |
-| L, Q | nothing beats STONER | 15 | 0 |
+| Next letter               | Best play with 7 tiles                                           | Reward | Gain over STONER |
+| ------------------------- | ---------------------------------------------------------------- | ------ | ---------------- |
+| A, E, I, N, O, R, S, T, U | a 7-letter word (3x), e.g. SENATOR, STONIER, TONSURE             | 21     | +6               |
+| D, G                      | RODENTS, TONGERS (3x)                                            | 24     | +9               |
+| B, C, M, P                | SORBENT, CORNETS, MONSTER, POSTERN (3x)                          | 27     | +12              |
+| F, H                      | FRONTES, HORNETS (3x)                                            | 30     | +15              |
+| V, W, Y                   | no 7-letter word; a 6-letter swap: STOVER, RESOWN, STONEY (2.5x) | 22     | +7               |
+| K                         | TOKENS (2.5x)                                                    | 25     | +10              |
+| J, X                      | JETONS, SEXTON (2.5x)                                            | 32     | +17              |
+| Z                         | ZONERS (2.5x)                                                    | 37     | +22              |
+| L, Q                      | nothing beats STONER                                             | 15     | 0                |
 
 Two things stand out:
 
@@ -97,7 +97,7 @@ The table above is a one-step simplification. K-13's real valuation looks furthe
 
 Points win matches; coins only buy tiles. So K-13 needs an exchange rate. It solves for **λ, the number of points one coin is worth right now** ([`src/brain/market.ts`](../src/brain/market.ts)):
 
-- If K-13 bid *value ÷ λ* on every useful auction still to come, it would expect to spend exactly its balance, plus the coins its words will earn in time to be spent.
+- If K-13 bid _value ÷ λ_ on every useful auction still to come, it would expect to spend exactly its balance, plus the coins its words will earn in time to be spent.
 - Early in the match there are many auctions to come and coins are scarce: λ is high and bids are cautious.
 - Near the end there is little left to buy, so λ falls and bids rise toward the whole balance. Unspent coins are worth nothing at the end.
 - At tables of 7 or more bots, prices are high from the first auction, so λ is scaled down there (`lambdaScaleBig`). In simulation that change improved K-13's mean place at 11 seats from 3.66 to 1.85.
@@ -133,11 +133,11 @@ With no rivals in the picture, the best Vickrey bid is simply the truthful one, 
 
 ## 5. The auction closes
 
-| Outcome | What happens | What K-13 learns |
-|---|---|---|
-| K-13 wins | It pays the second-highest bid (or 1 if it was the only bidder). The tile joins its rack. | The price is the best rival's bid, so every other rival bid at most that. |
-| A rival wins | Nothing is paid by K-13. | The price paid bounds every losing bid from above. After the match, the archive shows the winning bid exactly. |
-| Nobody bids | The tile is discarded. | Nobody wanted that letter at this point. |
+| Outcome      | What happens                                                                              | What K-13 learns                                                                                               |
+| ------------ | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| K-13 wins    | It pays the second-highest bid (or 1 if it was the only bidder). The tile joins its rack. | The price is the best rival's bid, so every other rival bid at most that.                                      |
+| A rival wins | Nothing is paid by K-13.                                                                  | The price paid bounds every losing bid from above. After the match, the archive shows the winning bid exactly. |
+| Nobody bids  | The tile is discarded.                                                                    | Nobody wanted that letter at this point.                                                                       |
 
 Those facts feed two loops:
 
@@ -157,13 +157,13 @@ K-13 plays only when playing wins by a margin (`playMargin`).
 
 **In the example**, with the tuned settings in [`data/params.json`](../data/params.json) (coinBonus 0.32, playMargin 2.7) and the illustrative λ = 0.5, assuming one more random tile:
 
-| Option | Calculation | Value |
-|---|---|---|
-| Play STONER now | 15 × (1 + 0.32 × 0.5), and one new tile alone makes no word | about 17.4 |
-| Play TONE now | 6 × (1 + 0.32 × 0.5), plus at most 5 more from S, R and the new tile (SH) | at most about 12 |
-| Hold | Expected best play from S T O N E R + one random tile | about 22.3 |
+| Option          | Calculation                                                               | Value            |
+| --------------- | ------------------------------------------------------------------------- | ---------------- |
+| Play STONER now | 15 × (1 + 0.32 × 0.5), and one new tile alone makes no word               | about 17.4       |
+| Play TONE now   | 6 × (1 + 0.32 × 0.5), plus at most 5 more from S, R and the new tile (SH) | at most about 12 |
+| Hold            | Expected best play from S T O N E R + one random tile                     | about 22.3       |
 
-Playing STONER now comes out about 4.9 points below holding. K-13 would play only if playing came out at least 2.7 points *above* holding, so it waits. (This sketch ignores the price of the extra tile; the real calculation also looks further ahead than one tile.) If no useful letter arrives before the end, STONER is still there to play.
+Playing STONER now comes out about 4.9 points below holding. K-13 would play only if playing came out at least 2.7 points _above_ holding, so it waits. (This sketch ignores the price of the extra tile; the real calculation also looks further ahead than one tile.) If no useful letter arrives before the end, STONER is still there to play.
 
 ---
 

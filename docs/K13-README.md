@@ -14,14 +14,14 @@ K-13 plays [ScrabbleBot](https://scrabblebot.spacetimedb.com), the sealed-bid le
 
 ## The game in 30 seconds
 
-| | |
-|---|---|
-| **Players** | Bots at a table (6 seats on the ladder; tournament tables vary). Each starts with **100 coins** and **5 hidden tiles**. |
-| **Auctions** | One letter at a time goes up for auction. Each auction lasts **1 second**. Bids are **sealed**: nobody sees anyone else's bid. |
-| **Price** | Usually Vickrey: the highest bid wins and pays the **second-highest** bid (a lone bidder pays 1). Some events use first-price: the winner pays its own bid. A letter nobody bids on is thrown away. |
-| **Words** | At any time a bot can spell a dictionary word from its rack. Reward = letter values (standard Scrabble) times a length multiplier. The reward is added to **both score and coins**. |
-| **Length pays** | 1x up to 3 letters, 1.5x at 4, 2x at 5, 2.5x at 6, **3x at 7 or more**. |
-| **End** | The match ends the moment the bag is empty. Tiles left on a rack and unspent coins are worth nothing. Highest score wins. |
+|                 |                                                                                                                                                                                                     |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Players**     | Bots at a table (6 seats on the ladder; tournament tables vary). Each starts with **100 coins** and **5 hidden tiles**.                                                                             |
+| **Auctions**    | One letter at a time goes up for auction. Each auction lasts **1 second**. Bids are **sealed**: nobody sees anyone else's bid.                                                                      |
+| **Price**       | Usually Vickrey: the highest bid wins and pays the **second-highest** bid (a lone bidder pays 1). Some events use first-price: the winner pays its own bid. A letter nobody bids on is thrown away. |
+| **Words**       | At any time a bot can spell a dictionary word from its rack. Reward = letter values (standard Scrabble) times a length multiplier. The reward is added to **both score and coins**.                 |
+| **Length pays** | 1x up to 3 letters, 1.5x at 4, 2x at 5, 2.5x at 6, **3x at 7 or more**.                                                                                                                             |
+| **End**         | The match ends the moment the bag is empty. Tiles left on a rack and unspent coins are worth nothing. Highest score wins.                                                                           |
 
 So the game is a budgeting problem (coins), an information problem (sealed bids) and a word problem (long words pay double per tile).
 
@@ -81,24 +81,24 @@ Stack: Node 22 and TypeScript (run with `tsx`, no build step), the `spacetimedb`
 
 ## Statistical methods
 
-| Area | Method | Where |
-|---|---|---|
-| Opponent bids | Hurdle model (logit for P(bid = 0)) plus a log-normal latent bid, rounded and clamped to [1, balance] | [`src/memory/fit.ts`](src/memory/fit.ts) |
-| Hidden losing bids | Censored likelihood (Tobit-style): winners' bids exact, losers' bids at most the price paid; an EM step for the runner-up | [`src/memory/fit.ts`](src/memory/fit.ts), [`src/memory/train.ts`](src/memory/train.ts) |
-| Thin data | Gaussian priors shrinking each bot toward a pooled market model (partial pooling), MAP fit by L-BFGS | [`src/memory/fit.ts`](src/memory/fit.ts) |
-| Recency | Observation weight halves every 4 hours; old bot versions discounted | [`src/memory/train.ts`](src/memory/train.ts) |
-| Model validation | Out-of-time split (fit oldest 80%, test newest 20%): log-likelihood vs market baseline, selection-aware quantile calibration, win-probability reliability | [`src/memory/validate.ts`](src/memory/validate.ts) |
-| In-match correction | Online calibration from the probability integral transform (PIT) of observed prices | [`src/brain/market.ts`](src/brain/market.ts) |
-| Hidden tiles | Unseen-tile belief, including starting tiles revealed by words | [`src/brain/belief.ts`](src/brain/belief.ts) |
-| Letter value | Monte Carlo over future draws with common random numbers | [`src/brain/value.ts`](src/brain/value.ts) |
-| Price of a coin | Shadow price λ (Lagrange multiplier) solved each round so expected spending meets the budget | [`src/brain/market.ts`](src/brain/market.ts) |
-| Competing bids | Order statistics: distribution of the highest and second-highest rival bid | [`src/brain/market.ts`](src/brain/market.ts) |
-| Bid choice | Expected-utility maximisation over every bid; first-price shading | [`src/brain/bid.ts`](src/brain/bid.ts) |
-| Finishing place | Score gaps approximated as normal, P(beat rival) = Φ(gap/σ) | [`src/brain/place.ts`](src/brain/place.ts) |
-| Play or hold | Comparison on the same simulated futures | [`src/brain/agent.ts`](src/brain/agent.ts) |
-| Clone calibration | Simulated method of moments: SPSA with Adam steps and Polyak averaging | [`src/memory/calibrate.ts`](src/memory/calibrate.ts) |
-| Strategy tuning | Cross-entropy method with common random numbers | [`src/brain/tune.ts`](src/brain/tune.ts) |
-| Evaluation | Paired-by-deal comparisons, 95% confidence intervals clustered by deal, held-out seeds | [`src/brain/eval.ts`](src/brain/eval.ts), [`src/sim/stats.ts`](src/sim/stats.ts), [`src/sim/tournament.ts`](src/sim/tournament.ts) |
+| Area                | Method                                                                                                                                                    | Where                                                                                                                              |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Opponent bids       | Hurdle model (logit for P(bid = 0)) plus a log-normal latent bid, rounded and clamped to [1, balance]                                                     | [`src/memory/fit.ts`](src/memory/fit.ts)                                                                                           |
+| Hidden losing bids  | Censored likelihood (Tobit-style): winners' bids exact, losers' bids at most the price paid; an EM step for the runner-up                                 | [`src/memory/fit.ts`](src/memory/fit.ts), [`src/memory/train.ts`](src/memory/train.ts)                                             |
+| Thin data           | Gaussian priors shrinking each bot toward a pooled market model (partial pooling), MAP fit by L-BFGS                                                      | [`src/memory/fit.ts`](src/memory/fit.ts)                                                                                           |
+| Recency             | Observation weight halves every 4 hours; old bot versions discounted                                                                                      | [`src/memory/train.ts`](src/memory/train.ts)                                                                                       |
+| Model validation    | Out-of-time split (fit oldest 80%, test newest 20%): log-likelihood vs market baseline, selection-aware quantile calibration, win-probability reliability | [`src/memory/validate.ts`](src/memory/validate.ts)                                                                                 |
+| In-match correction | Online calibration from the probability integral transform (PIT) of observed prices                                                                       | [`src/brain/market.ts`](src/brain/market.ts)                                                                                       |
+| Hidden tiles        | Unseen-tile belief, including starting tiles revealed by words                                                                                            | [`src/brain/belief.ts`](src/brain/belief.ts)                                                                                       |
+| Letter value        | Monte Carlo over future draws with common random numbers                                                                                                  | [`src/brain/value.ts`](src/brain/value.ts)                                                                                         |
+| Price of a coin     | Shadow price λ (Lagrange multiplier) solved each round so expected spending meets the budget                                                              | [`src/brain/market.ts`](src/brain/market.ts)                                                                                       |
+| Competing bids      | Order statistics: distribution of the highest and second-highest rival bid                                                                                | [`src/brain/market.ts`](src/brain/market.ts)                                                                                       |
+| Bid choice          | Expected-utility maximisation over every bid; first-price shading                                                                                         | [`src/brain/bid.ts`](src/brain/bid.ts)                                                                                             |
+| Finishing place     | Score gaps approximated as normal, P(beat rival) = Φ(gap/σ)                                                                                               | [`src/brain/place.ts`](src/brain/place.ts)                                                                                         |
+| Play or hold        | Comparison on the same simulated futures                                                                                                                  | [`src/brain/agent.ts`](src/brain/agent.ts)                                                                                         |
+| Clone calibration   | Simulated method of moments: SPSA with Adam steps and Polyak averaging                                                                                    | [`src/memory/calibrate.ts`](src/memory/calibrate.ts)                                                                               |
+| Strategy tuning     | Cross-entropy method with common random numbers                                                                                                           | [`src/brain/tune.ts`](src/brain/tune.ts)                                                                                           |
+| Evaluation          | Paired-by-deal comparisons, 95% confidence intervals clustered by deal, held-out seeds                                                                    | [`src/brain/eval.ts`](src/brain/eval.ts), [`src/sim/stats.ts`](src/sim/stats.ts), [`src/sim/tournament.ts`](src/sim/tournament.ts) |
 
 ---
 
@@ -108,29 +108,29 @@ Stack: Node 22 and TypeScript (run with `tsx`, no build step), the `spacetimedb`
 
 68 entrants. Four Swiss rounds at tables of 6–7, then the top 6 to an elimination bracket (last place out each match), then a 3-game heads-up final decided by total score. Vickrey auctions.
 
-| Stage | Match | Place | K-13 score | Note |
-|---|---|---|---|---|
-| Swiss | Round 1 | 1st | 121 | |
-| Swiss | Round 2 | 2nd | 95 | Behind Waupus by 1 |
-| Swiss | Round 3 | 2nd | 100 | Behind Waupus by 2 |
-| Swiss | Round 4 | 1st | 84 | 22 Swiss points in total |
-| Bracket | 6 left | 3rd of 6 | 82 | |
-| Bracket | 5 left | 1st of 5 | 132 | |
-| Bracket | 4 left | 3rd of 4 | 118 | |
-| Bracket | 3 left | 2nd of 3 | 198 | Waupus eliminated |
-| Final vs TileShark | Game 1 | Won | 429–89 | |
-| Final vs TileShark | Game 2 | Won | 420–98 | |
-| Final vs TileShark | Game 3 | Won | 353–136 | **Total 1,202–323** |
+| Stage              | Match   | Place    | K-13 score | Note                     |
+| ------------------ | ------- | -------- | ---------- | ------------------------ |
+| Swiss              | Round 1 | 1st      | 121        |                          |
+| Swiss              | Round 2 | 2nd      | 95         | Behind Waupus by 1       |
+| Swiss              | Round 3 | 2nd      | 100        | Behind Waupus by 2       |
+| Swiss              | Round 4 | 1st      | 84         | 22 Swiss points in total |
+| Bracket            | 6 left  | 3rd of 6 | 82         |                          |
+| Bracket            | 5 left  | 1st of 5 | 132        |                          |
+| Bracket            | 4 left  | 3rd of 4 | 118        |                          |
+| Bracket            | 3 left  | 2nd of 3 | 198        | Waupus eliminated        |
+| Final vs TileShark | Game 1  | Won      | 429–89     |                          |
+| Final vs TileShark | Game 2  | Won      | 420–98     |                          |
+| Final vs TileShark | Game 3  | Won      | 353–136    | **Total 1,202–323**      |
 
 No deadline misses and no errors during the event.
 
 ### Ladder form before the tournament
 
-| | K-13 | Top bots |
-|---|---|---|
-| Wins in six-player matches (recent form) | about 40–50% | – |
-| Points per match | ~90 | 84–99 |
-| Words of 7+ letters per match | ~1.4 | 1.35–1.8 |
+|                                          | K-13         | Top bots |
+| ---------------------------------------- | ------------ | -------- |
+| Wins in six-player matches (recent form) | about 40–50% | –        |
+| Points per match                         | ~90          | 84–99    |
+| Words of 7+ letters per match            | ~1.4         | 1.35–1.8 |
 
 Simulator figures in [`src/brain/README.md`](src/brain/README.md) are measured against clones. They are reliable as paired differences, but their absolute values are optimistic, because clones spend early and leave cheap tiles late.
 
@@ -165,26 +165,26 @@ Each auction sells one letter. K-13 sends a sealed bid, and it may play words at
 - **Tuning** ([`src/brain/tune.ts`](src/brain/tune.ts)). Cross-entropy search over the strategy's parameters. Every candidate plays the same deals against copies of itself and calibrated clones of the top bots; the objective is mean finishing place. Output: [`data/params.json`](data/params.json).
 - **Evaluation** ([`src/brain/eval.ts`](src/brain/eval.ts), [`src/sim/run.ts`](src/sim/run.ts), [`src/sim/tournament.ts`](src/sim/tournament.ts)). Paired comparisons on held-out seeds (same deals, seats rotated) with 95% intervals clustered by deal, across every tournament stage and both auction types. In the analysis of those runs, series win rates were reported with Wilson intervals, and a null check guarded the comparisons: the incumbent against an identical copy must give a difference of exactly 0.
 
-| Change | Evidence | Decision |
-|---|---|---|
-| Big-table coin pricing (7+ seats) | Mean place at 11 seats 3.66 → 1.85 (paired Δ −1.82 ± 0.25, 400 matches per arm); last places at 8 seats 3.5% → 0% | Shipped for 7+ seats |
-| The same at 6 seats | Mean place +0.12 ± 0.11 (worse) | Not applied at 6 seats |
-| Heads-up variant | Beat K-13 in 99.7% of Vickrey finals, but lost under first-price | Rejected |
-| Stage-specific objectives (`stageAware`) | Never improved survival or Swiss points | Off |
-| 16x more simulation per move | No significant change in mean place | Not needed: gains come from modelling, not brute force |
+| Change                                   | Evidence                                                                                                          | Decision                                               |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Big-table coin pricing (7+ seats)        | Mean place at 11 seats 3.66 → 1.85 (paired Δ −1.82 ± 0.25, 400 matches per arm); last places at 8 seats 3.5% → 0% | Shipped for 7+ seats                                   |
+| The same at 6 seats                      | Mean place +0.12 ± 0.11 (worse)                                                                                   | Not applied at 6 seats                                 |
+| Heads-up variant                         | Beat K-13 in 99.7% of Vickrey finals, but lost under first-price                                                  | Rejected                                               |
+| Stage-specific objectives (`stageAware`) | Never improved survival or Swiss points                                                                           | Off                                                    |
+| 16x more simulation per move             | No significant change in mean place                                                                               | Not needed: gains come from modelling, not brute force |
 
 ## SpacetimeDB backend
 
 [`backend/`](backend/) is a TypeScript SpacetimeDB module published as database `k13` on a dedicated local server (`spacetimedb-standalone` v2.13.0). Full schema, reducers and measurements: [`backend/README.md`](backend/README.md).
 
-| Tables | Contents |
-|---|---|
-| `g_*` | One mirror table per public game table, keyed by the server's primary keys, so every upsert is idempotent. Deletions become tombstones. |
-| `d_*` | Derived per-match facts (seats, auction context, bid and play observations). Re-deriving causes no churn. |
-| `market_stat`, `opp_stat`, `seat_stat` | Exact sums the module maintains as `d_*` rows change (SpacetimeDB SQL has no `GROUP BY`). |
-| `bid_model`, `meta` | Fitted models and bookkeeping. |
-| `k13_event`, `k13_decision`, `k13_word`, `k13_match`, `k13_status` | Live telemetry: every decision, word and match, and a heartbeat. |
-| `writer` (private) | Allow-list. Every reducer refuses callers not on it; the tests check each one against an anonymous caller. |
+| Tables                                                             | Contents                                                                                                                                |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `g_*`                                                              | One mirror table per public game table, keyed by the server's primary keys, so every upsert is idempotent. Deletions become tombstones. |
+| `d_*`                                                              | Derived per-match facts (seats, auction context, bid and play observations). Re-deriving causes no churn.                               |
+| `market_stat`, `opp_stat`, `seat_stat`                             | Exact sums the module maintains as `d_*` rows change (SpacetimeDB SQL has no `GROUP BY`).                                               |
+| `bid_model`, `meta`                                                | Fitted models and bookkeeping.                                                                                                          |
+| `k13_event`, `k13_decision`, `k13_word`, `k13_match`, `k13_status` | Live telemetry: every decision, word and match, and a heartbeat.                                                                        |
+| `writer` (private)                                                 | Allow-list. Every reducer refuses callers not on it; the tests check each one against an anonymous caller.                              |
 
 The mirror is a subscription-to-subscription pipe: the miner subscribes to the game and writes to `k13` through reducers, and the live bot writes telemetry the same way. Mirror lag behind the game is 1–3 s. The bot does not depend on the backend to play: it loads its opponent model from a local SQLite copy.
 
@@ -201,23 +201,23 @@ The mirror is a subscription-to-subscription pipe: the miner subscribes to the g
 
 ## Repository layout
 
-| Path | Contents |
-|---|---|
-| `src/bot.ts` | Live bot entry point |
-| `src/live/` | Session, two-stage bidder, clock sync, tournament registration, watchdog, logs |
-| `src/brain/` | Strategy: belief, value, market (λ), bid, place, tournament, params, tune, eval |
-| `src/memory/` | Miner, derive, censored bid-model fit/train/validate, opponent model, clones, calibration |
-| `src/sim/` | Simulator, parallel runner, tournament stress tests |
-| `src/core/` | Rules and constants, shared types, word engine |
-| `src/agents/` | The official starter strategy (baseline) |
-| `src/backend/` | Backend client, mirror sync, telemetry, import and compare tools |
-| `src/monitor/` | Status reports and log statistics |
-| `src/module_bindings/`, `src/backend_bindings/` | Generated bindings (game module; `backend/`) |
-| `backend/` | K-13's SpacetimeDB module |
-| `data/` | `params.json` (tuned), `clones.json` (calibrated clones), `field.json` (recent tables, likely entrants), `wordlist.txt` (ENABLE) |
-| `deploy/` | systemd user-unit templates: bot, miner, local SpacetimeDB |
-| `scripts/` | `k13.sh` (tmux runner), `rehearse/run.ts` (tournament rehearsal) |
-| `docs/` | [`HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md): one auction, step by step |
+| Path                                            | Contents                                                                                                                         |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `src/bot.ts`                                    | Live bot entry point                                                                                                             |
+| `src/live/`                                     | Session, two-stage bidder, clock sync, tournament registration, watchdog, logs                                                   |
+| `src/brain/`                                    | Strategy: belief, value, market (λ), bid, place, tournament, params, tune, eval                                                  |
+| `src/memory/`                                   | Miner, derive, censored bid-model fit/train/validate, opponent model, clones, calibration                                        |
+| `src/sim/`                                      | Simulator, parallel runner, tournament stress tests                                                                              |
+| `src/core/`                                     | Rules and constants, shared types, word engine                                                                                   |
+| `src/agents/`                                   | The official starter strategy (baseline)                                                                                         |
+| `src/backend/`                                  | Backend client, mirror sync, telemetry, import and compare tools                                                                 |
+| `src/monitor/`                                  | Status reports and log statistics                                                                                                |
+| `src/module_bindings/`, `src/backend_bindings/` | Generated bindings (game module; `backend/`)                                                                                     |
+| `backend/`                                      | K-13's SpacetimeDB module                                                                                                        |
+| `data/`                                         | `params.json` (tuned), `clones.json` (calibrated clones), `field.json` (recent tables, likely entrants), `wordlist.txt` (ENABLE) |
+| `deploy/`                                       | systemd user-unit templates: bot, miner, local SpacetimeDB                                                                       |
+| `scripts/`                                      | `k13.sh` (tmux runner), `rehearse/run.ts` (tournament rehearsal)                                                                 |
+| `docs/`                                         | [`HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md): one auction, step by step                                                             |
 
 Internally the strategy is called `palace` (after the method of loci). That is the name used by `--agent palace`, the simulator's seat spec and the `PALACE_*` environment variables.
 

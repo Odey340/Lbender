@@ -96,9 +96,6 @@ export function wordReward(word: string): number {
  * Auctions in a match: the bag minus every starting rack. The last of these
  * is worthless to a live bot: the match ends the instant it closes.
  */
-export function auctionsPerMatch(
-  players: number,
-  rackSize = STARTING_RACK_SIZE,
-): number {
+export function auctionsPerMatch(players: number, rackSize = STARTING_RACK_SIZE): number {
   return BAG_SIZE - players * rackSize;
 }

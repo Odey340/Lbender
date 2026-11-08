@@ -37,7 +37,17 @@ function seed(db: Db): void {
   ]);
   ins(
     "match_state",
-    ["id", "status", "current_round", "bag_total", "auction_type", "created_us", "started_us", "ended_us", "starting_rack_size"],
+    [
+      "id",
+      "status",
+      "current_round",
+      "bag_total",
+      "auction_type",
+      "created_us",
+      "started_us",
+      "ended_us",
+      "starting_rack_size",
+    ],
     "id",
     [[7, "Ended", 5, 0, "Vickrey", 1000, 1000, 6000, 5]],
   );
@@ -46,13 +56,18 @@ function seed(db: Db): void {
     [2, 7, B, 88, 0],
     [3, 7, V, 101, 3],
   ]);
-  ins("auction_result", ["auction_id", "match_id", "letter", "winner_bot_id", "paid", "closed_us"], "auction_id", [
-    [100, 7, "E", A, 3, 2000],
-    [101, 7, "Q", B, 12, 3000],
-    [102, 7, "A", V, 2, 4000],
-    [103, 7, "Z", A, 15, 5000],
-    [104, 7, "X", null, 0, 6000],
-  ]);
+  ins(
+    "auction_result",
+    ["auction_id", "match_id", "letter", "winner_bot_id", "paid", "closed_us"],
+    "auction_id",
+    [
+      [100, 7, "E", A, 3, 2000],
+      [101, 7, "Q", B, 12, 3000],
+      [102, 7, "A", V, 2, 4000],
+      [103, 7, "Z", A, 15, 5000],
+      [104, 7, "X", null, 0, 6000],
+    ],
+  );
   ins("auction_top_bid_archive", ["auction_id", "match_id", "top_bid"], "auction_id", [
     [100, 7, 5],
     [101, 7, 20],
@@ -60,11 +75,18 @@ function seed(db: Db): void {
     [103, 7, 30],
     [104, 7, 0],
   ]);
-  ins("word_play", ["id", "match_id", "bot_id", "word", "base_score", "bonus", "total_reward", "played_us"], "id", [
-    [1, 7, V, "TEA", 3, 0, 3, 4000],
-    [2, 7, A, "ZEE", 12, 0, 12, 5500],
-  ]);
-  db.prepare("INSERT OR REPLACE INTO match_mined (match_id, complete, mined_us) VALUES (7, 1, 1)").run();
+  ins(
+    "word_play",
+    ["id", "match_id", "bot_id", "word", "base_score", "bonus", "total_reward", "played_us"],
+    "id",
+    [
+      [1, 7, V, "TEA", 3, 0, 3, 4000],
+      [2, 7, A, "ZEE", 12, 0, 12, 5500],
+    ],
+  );
+  db.prepare(
+    "INSERT OR REPLACE INTO match_mined (match_id, complete, mined_us) VALUES (7, 1, 1)",
+  ).run();
 }
 
 test("db opens in WAL mode and upserts idempotently", () => {
@@ -73,9 +95,9 @@ test("db opens in WAL mode and upserts idempotently", () => {
   seed(db);
   seed(db); // same rows again: no duplicates, no errors
   assert.equal(num(db.prepare("SELECT COUNT(*) AS n FROM auction_result").get()!.n), 5);
-  db.prepare(upsertSql("bot", ["id", "name", "team_id", "is_simulated", "strategy", "created_us"], ["id"])).run(
-    A, "alpha2", 1, 0, "Human", 0,
-  );
+  db.prepare(
+    upsertSql("bot", ["id", "name", "team_id", "is_simulated", "strategy", "created_us"], ["id"]),
+  ).run(A, "alpha2", 1, 0, "Human", 0);
   assert.equal(String(db.prepare("SELECT name FROM bot WHERE id = ?").get(A)!.name), "alpha2");
   db.close();
 });
@@ -90,9 +112,16 @@ test("derive replays balances, racks and what each sealed bid is known to be", (
   assert.equal(s.runnerUpExact, 1);
 
   const obs = (auction: number, bot: number) =>
-    db.prepare("SELECT kind, value, balance, cap, rack_size, won, others_max FROM bid_obs WHERE auction_id = ? AND bot_id = ?").get(auction, bot)!;
+    db
+      .prepare(
+        "SELECT kind, value, balance, cap, rack_size, won, others_max FROM bid_obs WHERE auction_id = ? AND bot_id = ?",
+      )
+      .get(auction, bot)!;
   // Winner: exact top bid. Loser: at most paid.
-  assert.deepEqual([num(obs(100, A).kind), num(obs(100, A).value), num(obs(100, A).won)], [KIND_EQ, 5, 1]);
+  assert.deepEqual(
+    [num(obs(100, A).kind), num(obs(100, A).value), num(obs(100, A).won)],
+    [KIND_EQ, 5, 1],
+  );
   assert.deepEqual([num(obs(100, B).kind), num(obs(100, B).value)], [KIND_LE, 3]);
   // The sim could have bid 3 on E, so B isn't pinned down there; on Z it can't reach 15.
   assert.deepEqual([num(obs(103, B).kind), num(obs(103, B).value)], [KIND_EQ, 15]);
@@ -105,16 +134,33 @@ test("derive replays balances, racks and what each sealed bid is known to be", (
   // Sims don't get bid rows.
   assert.equal(num(db.prepare("SELECT COUNT(*) AS n FROM bid_obs WHERE bot_id = ?").get(V)!.n), 0);
 
-  const ctx = db.prepare("SELECT round_idx, phase, sim_q FROM auction_ctx WHERE auction_id = 100").get()!;
+  const ctx = db
+    .prepare("SELECT round_idx, phase, sim_q FROM auction_ctx WHERE auction_id = 100")
+    .get()!;
   assert.equal(num(ctx.round_idx), 0);
   assert.ok(Math.abs(Number(ctx.sim_q) - 0.8) < 1e-12); // V's E bids: 1,1,1,2,3 -> 4 of 5 below 3
 
-  const seats = db.prepare("SELECT bot_id, place, final_balance, tiles_left FROM match_seat WHERE match_id = 7 ORDER BY place").all();
-  assert.deepEqual(seats.map((r) => num(r.bot_id)), [A, V, B]);
-  assert.deepEqual(seats.map((r) => num(r.final_balance)), [94, 101, 88]);
+  const seats = db
+    .prepare(
+      "SELECT bot_id, place, final_balance, tiles_left FROM match_seat WHERE match_id = 7 ORDER BY place",
+    )
+    .all();
+  assert.deepEqual(
+    seats.map((r) => num(r.bot_id)),
+    [A, V, B],
+  );
+  assert.deepEqual(
+    seats.map((r) => num(r.final_balance)),
+    [94, 101, 88],
+  );
 
-  const play = db.prepare("SELECT round_idx, rack_before, balance_before FROM play_obs WHERE word_id = 2").get()!;
-  assert.deepEqual([num(play.round_idx), num(play.rack_before), num(play.balance_before)], [4, 7, 82]);
+  const play = db
+    .prepare("SELECT round_idx, rack_before, balance_before FROM play_obs WHERE word_id = 2")
+    .get()!;
+  assert.deepEqual(
+    [num(play.round_idx), num(play.rack_before), num(play.balance_before)],
+    [4, 7, 82],
+  );
 
   // Deriving again replaces rather than duplicates.
   deriveAll(db, { rebuild: true });

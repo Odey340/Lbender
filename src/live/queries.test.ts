@@ -1,11 +1,26 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { decodeRows } from "./http.js";
-import { anchorFor, anchoredQueries, assertAllowed, baseQueries, identityLiteral, rackQuery, rosterQuery, tournamentQueries } from "./queries.js";
+import {
+  anchorFor,
+  anchoredQueries,
+  assertAllowed,
+  baseQueries,
+  identityLiteral,
+  rackQuery,
+  rosterQuery,
+  tournamentQueries,
+} from "./queries.js";
 
 test("queries: anchored set follows our seat, never self-joins match_participant", () => {
   const q = anchoredQueries(42n, 13000n);
-  assert.ok(q.every((s) => s.includes("p.bot_id = 42 AND p.match_id > 13000") || s.includes("bot_id = 42 AND match_id > 13000")));
+  assert.ok(
+    q.every(
+      (s) =>
+        s.includes("p.bot_id = 42 AND p.match_id > 13000") ||
+        s.includes("bot_id = 42 AND match_id > 13000"),
+    ),
+  );
   // A self-join only streams updates for our own row (measured live).
   assert.ok(!q.some((s) => /FROM match_participant \w+ JOIN match_participant/.test(s)));
   assert.equal(rosterQuery(13001n), "SELECT * FROM match_participant WHERE match_id = 13001");
@@ -23,7 +38,10 @@ test("queries: identity literal and the forbidden table", () => {
   assert.throws(() => assertAllowed(["SELECT * FROM visible_auction_top_bids"]));
   assert.doesNotThrow(() => assertAllowed(anchoredQueries(1n, 0n)));
   assert.doesNotThrow(() => assertAllowed(tournamentQueries()));
-  assert.deepEqual(tournamentQueries(), ["SELECT * FROM tournament_entry", "SELECT * FROM tournament_match"]);
+  assert.deepEqual(tournamentQueries(), [
+    "SELECT * FROM tournament_entry",
+    "SELECT * FROM tournament_match",
+  ]);
 });
 
 test("http: SATS-JSON rows decode enums, options and timestamps", () => {
@@ -57,7 +75,16 @@ test("http: SATS-JSON rows decode enums, options and timestamps", () => {
         },
         {
           name: { some: "created_at" },
-          algebraic_type: { Product: { elements: [{ name: { some: "__timestamp_micros_since_unix_epoch__" }, algebraic_type: { I64: [] } }] } },
+          algebraic_type: {
+            Product: {
+              elements: [
+                {
+                  name: { some: "__timestamp_micros_since_unix_epoch__" },
+                  algebraic_type: { I64: [] },
+                },
+              ],
+            },
+          },
         },
       ],
     },

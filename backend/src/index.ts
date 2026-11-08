@@ -105,7 +105,12 @@ function sameRow(a: object, b: object, skip?: string): boolean {
 type Pk<R, K> = { find(key: K): R | null | undefined; update(row: R): R };
 
 /** Returns the replaced row, `null` for an insert, `"same"` for a no-op. */
-function upsert<R extends object, K>(pk: Pk<R, K>, insert: (row: R) => R, key: K, row: R): R | null | "same" {
+function upsert<R extends object, K>(
+  pk: Pk<R, K>,
+  insert: (row: R) => R,
+  key: K,
+  row: R,
+): R | null | "same" {
   const old = pk.find(key);
   if (old == null) {
     insert(row);
@@ -143,7 +148,13 @@ export const addWriter = spacetimedb.reducer(
       ctx.db.writer.identity.update({ ...old, label });
       return;
     }
-    ctx.db.writer.insert({ identity, role: "writer", label, addedAt: ctx.timestamp, addedBy: ctx.sender });
+    ctx.db.writer.insert({
+      identity,
+      role: "writer",
+      label,
+      addedAt: ctx.timestamp,
+      addedBy: ctx.sender,
+    });
   },
 );
 
@@ -164,12 +175,15 @@ export const upsertBots = spacetimedb.reducer({ rows: t.array(gBot.rowType) }, (
   for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
 });
 
-export const upsertBotStats = spacetimedb.reducer({ rows: t.array(gBotStats.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gBotStats;
-  for (const r of rows) upsert(tb.botId, (x) => tb.insert(x), r.botId, r);
-});
+export const upsertBotStats = spacetimedb.reducer(
+  { rows: t.array(gBotStats.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gBotStats;
+    for (const r of rows) upsert(tb.botId, (x) => tb.insert(x), r.botId, r);
+  },
+);
 
 export const upsertRetiredBotStats = spacetimedb.reducer(
   { rows: t.array(gRetiredBotStats.rowType) },
@@ -181,19 +195,25 @@ export const upsertRetiredBotStats = spacetimedb.reducer(
   },
 );
 
-export const upsertBotVersions = spacetimedb.reducer({ rows: t.array(gBotVersion.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gBotVersion;
-  for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
-});
+export const upsertBotVersions = spacetimedb.reducer(
+  { rows: t.array(gBotVersion.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gBotVersion;
+    for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
+  },
+);
 
-export const upsertMatches = spacetimedb.reducer({ rows: t.array(gMatch.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gMatch;
-  for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
-});
+export const upsertMatches = spacetimedb.reducer(
+  { rows: t.array(gMatch.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gMatch;
+    for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
+  },
+);
 
 export const upsertParticipants = spacetimedb.reducer(
   { rows: t.array(gParticipant.rowType) },
@@ -205,39 +225,51 @@ export const upsertParticipants = spacetimedb.reducer(
   },
 );
 
-export const upsertAuctions = spacetimedb.reducer({ rows: t.array(gAuction.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gAuction;
-  for (const r of rows) {
-    checkLetter(r.letter);
-    upsert(tb.auctionId, (x) => tb.insert(x), r.auctionId, r);
-  }
-});
+export const upsertAuctions = spacetimedb.reducer(
+  { rows: t.array(gAuction.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gAuction;
+    for (const r of rows) {
+      checkLetter(r.letter);
+      upsert(tb.auctionId, (x) => tb.insert(x), r.auctionId, r);
+    }
+  },
+);
 
-export const upsertTopBids = spacetimedb.reducer({ rows: t.array(gTopBid.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gTopBid;
-  for (const r of rows) upsert(tb.auctionId, (x) => tb.insert(x), r.auctionId, r);
-});
+export const upsertTopBids = spacetimedb.reducer(
+  { rows: t.array(gTopBid.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gTopBid;
+    for (const r of rows) upsert(tb.auctionId, (x) => tb.insert(x), r.auctionId, r);
+  },
+);
 
-export const upsertWords = spacetimedb.reducer({ rows: t.array(gWord.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gWord;
-  for (const r of rows) {
-    checkText("word", r.word, 64);
-    upsert(tb.id, (x) => tb.insert(x), r.id, r);
-  }
-});
+export const upsertWords = spacetimedb.reducer(
+  { rows: t.array(gWord.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gWord;
+    for (const r of rows) {
+      checkText("word", r.word, 64);
+      upsert(tb.id, (x) => tb.insert(x), r.id, r);
+    }
+  },
+);
 
-export const upsertRatings = spacetimedb.reducer({ rows: t.array(gRating.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gRating;
-  for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
-});
+export const upsertRatings = spacetimedb.reducer(
+  { rows: t.array(gRating.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gRating;
+    for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
+  },
+);
 
 // rating_history ids change when the server rebuilds ratings, so a fetched
 // match's rows replace whatever was stored for it, in one transaction.
@@ -249,23 +281,28 @@ export const replaceRatings = spacetimedb.reducer(
     checkBatch(matchIds);
     const want = new Set(matchIds);
     for (const r of rows) {
-      if (!want.has(r.matchId)) throw new SenderError(`rating ${r.id} is for match ${r.matchId}, not in matchIds`);
+      if (!want.has(r.matchId))
+        throw new SenderError(`rating ${r.id} is for match ${r.matchId}, not in matchIds`);
     }
     const tb = ctx.db.gRating;
     const keep = new Set(rows.map((r) => r.id));
     for (const m of want) {
-      for (const old of [...tb.gRatingByMatch.filter(m)]) if (!keep.has(old.id)) tb.id.delete(old.id);
+      for (const old of [...tb.gRatingByMatch.filter(m)])
+        if (!keep.has(old.id)) tb.id.delete(old.id);
     }
     for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
   },
 );
 
-export const upsertTournaments = spacetimedb.reducer({ rows: t.array(gTournament.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gTournament;
-  for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
-});
+export const upsertTournaments = spacetimedb.reducer(
+  { rows: t.array(gTournament.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gTournament;
+    for (const r of rows) upsert(tb.id, (x) => tb.insert(x), r.id, r);
+  },
+);
 
 export const upsertTournamentEntries = spacetimedb.reducer(
   { rows: t.array(gTournamentEntry.rowType) },
@@ -287,12 +324,15 @@ export const upsertTournamentMatches = spacetimedb.reducer(
   },
 );
 
-export const upsertMatchMined = spacetimedb.reducer({ rows: t.array(gMatchMined.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows);
-  const tb = ctx.db.gMatchMined;
-  for (const r of rows) upsert(tb.matchId, (x) => tb.insert(x), r.matchId, r);
-});
+export const upsertMatchMined = spacetimedb.reducer(
+  { rows: t.array(gMatchMined.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows);
+    const tb = ctx.db.gMatchMined;
+    for (const r of rows) upsert(tb.matchId, (x) => tb.insert(x), r.matchId, r);
+  },
+);
 
 /** Tombstone where the miner keeps history, delete where it mirrors state. */
 function mirrorDelete(ctx: Ctx, table: string, id: bigint, at: Timestamp): void {
@@ -302,21 +342,44 @@ function mirrorDelete(ctx: Ctx, table: string, id: bigint, at: Timestamp): void 
     if (old && old.deletedAt === undefined) pk.update({ ...old, deletedAt: at });
   };
   switch (table) {
-    case "g_bot": return stamp(db.gBot.id);
-    case "g_match": return stamp(db.gMatch.id);
-    case "g_participant": return stamp(db.gParticipant.id);
-    case "g_auction": return stamp(db.gAuction.auctionId);
-    case "g_top_bid": return stamp(db.gTopBid.auctionId);
-    case "g_word": return stamp(db.gWord.id);
-    case "g_bot_stats": db.gBotStats.botId.delete(id); return;
-    case "g_retired_bot_stats": db.gRetiredBotStats.id.delete(id); return;
-    case "g_bot_version": db.gBotVersion.id.delete(id); return;
-    case "g_rating": db.gRating.id.delete(id); return;
-    case "g_tournament": db.gTournament.id.delete(id); return;
-    case "g_tournament_entry": db.gTournamentEntry.id.delete(id); return;
-    case "g_tournament_match": db.gTournamentMatch.id.delete(id); return;
-    case "g_match_mined": db.gMatchMined.matchId.delete(id); return;
-    default: throw new SenderError(`mirror_delete: unknown table ${JSON.stringify(table)}`);
+    case "g_bot":
+      return stamp(db.gBot.id);
+    case "g_match":
+      return stamp(db.gMatch.id);
+    case "g_participant":
+      return stamp(db.gParticipant.id);
+    case "g_auction":
+      return stamp(db.gAuction.auctionId);
+    case "g_top_bid":
+      return stamp(db.gTopBid.auctionId);
+    case "g_word":
+      return stamp(db.gWord.id);
+    case "g_bot_stats":
+      db.gBotStats.botId.delete(id);
+      return;
+    case "g_retired_bot_stats":
+      db.gRetiredBotStats.id.delete(id);
+      return;
+    case "g_bot_version":
+      db.gBotVersion.id.delete(id);
+      return;
+    case "g_rating":
+      db.gRating.id.delete(id);
+      return;
+    case "g_tournament":
+      db.gTournament.id.delete(id);
+      return;
+    case "g_tournament_entry":
+      db.gTournamentEntry.id.delete(id);
+      return;
+    case "g_tournament_match":
+      db.gTournamentMatch.id.delete(id);
+      return;
+    case "g_match_mined":
+      db.gMatchMined.matchId.delete(id);
+      return;
+    default:
+      throw new SenderError(`mirror_delete: unknown table ${JSON.stringify(table)}`);
   }
 }
 
@@ -333,10 +396,15 @@ export const mirrorDeleteRows = spacetimedb.reducer(
 // ---------- Derived facts (derive.ts) ----------
 
 type Group<R> = Map<bigint, R[]>;
-function byMatch<R extends { matchId: bigint }>(rows: readonly R[], want: Set<bigint>, what: string): Group<R> {
+function byMatch<R extends { matchId: bigint }>(
+  rows: readonly R[],
+  want: Set<bigint>,
+  what: string,
+): Group<R> {
   const g: Group<R> = new Map();
   for (const r of rows) {
-    if (!want.has(r.matchId)) throw new SenderError(`${what} row for match ${r.matchId}, not in matchIds`);
+    if (!want.has(r.matchId))
+      throw new SenderError(`${what} row for match ${r.matchId}, not in matchIds`);
     let a = g.get(r.matchId);
     if (!a) g.set(r.matchId, (a = []));
     a.push(r);
@@ -416,16 +484,29 @@ export const putDerived = spacetimedb.reducer(
     const acc = new StatAcc();
     for (const m of want) {
       const info = db.dMatchInfo.matchId.find(m);
-      syncRows<DMatchInfo>(info ? [info] : [], g.infos.get(m) ?? [], (r) => String(r.matchId), {
-        insert: (r) => db.dMatchInfo.insert(r),
-        update: (_o, r) => db.dMatchInfo.matchId.update(r),
-        remove: (o) => db.dMatchInfo.matchId.delete(o.matchId),
-      }, undefined);
-      syncRows<DMatchSeat>(db.dMatchSeat.dSeatByMatch.filter(m), g.seats.get(m) ?? [], (r) => String(r.botId), {
-        insert: (r) => db.dMatchSeat.insert({ ...r, id: 0n }),
-        update: (o, r) => db.dMatchSeat.id.update({ ...r, id: o.id }),
-        remove: (o) => db.dMatchSeat.id.delete(o.id),
-      }, (r, s) => acc.seatRow(r, s), "id");
+      syncRows<DMatchInfo>(
+        info ? [info] : [],
+        g.infos.get(m) ?? [],
+        (r) => String(r.matchId),
+        {
+          insert: (r) => db.dMatchInfo.insert(r),
+          update: (_o, r) => db.dMatchInfo.matchId.update(r),
+          remove: (o) => db.dMatchInfo.matchId.delete(o.matchId),
+        },
+        undefined,
+      );
+      syncRows<DMatchSeat>(
+        db.dMatchSeat.dSeatByMatch.filter(m),
+        g.seats.get(m) ?? [],
+        (r) => String(r.botId),
+        {
+          insert: (r) => db.dMatchSeat.insert({ ...r, id: 0n }),
+          update: (o, r) => db.dMatchSeat.id.update({ ...r, id: o.id }),
+          remove: (o) => db.dMatchSeat.id.delete(o.id),
+        },
+        (r, s) => acc.seatRow(r, s),
+        "id",
+      );
       // A key already stored under another match fails the insert on the
       // primary key, which rolls the whole call back: ids never move.
       syncRows<DAuctionCtx>(
@@ -439,11 +520,18 @@ export const putDerived = spacetimedb.reducer(
         },
         (r, s) => acc.auction(r, s),
       );
-      syncRows<DBidObs>(db.dBidObs.dBidByMatch.filter(m), g.bids.get(m) ?? [], (r) => `${r.auctionId}|${r.botId}`, {
-        insert: (r) => db.dBidObs.insert({ ...r, id: 0n }),
-        update: (o, r) => db.dBidObs.id.update({ ...r, id: o.id }),
-        remove: (o) => db.dBidObs.id.delete(o.id),
-      }, (r, s) => acc.bid(r, s), "id");
+      syncRows<DBidObs>(
+        db.dBidObs.dBidByMatch.filter(m),
+        g.bids.get(m) ?? [],
+        (r) => `${r.auctionId}|${r.botId}`,
+        {
+          insert: (r) => db.dBidObs.insert({ ...r, id: 0n }),
+          update: (o, r) => db.dBidObs.id.update({ ...r, id: o.id }),
+          remove: (o) => db.dBidObs.id.delete(o.id),
+        },
+        (r, s) => acc.bid(r, s),
+        "id",
+      );
       syncRows<DPlayObs>(
         db.dPlayObs.dPlayByMatch.filter(m),
         g.plays.get(m) ?? [],
@@ -465,24 +553,36 @@ function flushStats(ctx: Ctx, acc: StatAcc): void {
   const db = ctx.db;
   // Sums.flush is untyped over the row; these adapters pair each table's
   // primary-key index with its insert.
-  acc.market.flush<string>({
-    find: (k) => db.marketStat.key.find(k),
-    update: (r) => db.marketStat.key.update(r as never),
-    delete: (k) => db.marketStat.key.delete(k),
-    insert: (r) => db.marketStat.insert(r as never),
-  }, "key", now);
-  acc.opp.flush<string>({
-    find: (k) => db.oppStat.key.find(k),
-    update: (r) => db.oppStat.key.update(r as never),
-    delete: (k) => db.oppStat.key.delete(k),
-    insert: (r) => db.oppStat.insert(r as never),
-  }, "key", now);
-  acc.seat.flush<bigint>({
-    find: (k) => db.seatStat.botId.find(k),
-    update: (r) => db.seatStat.botId.update(r as never),
-    delete: (k) => db.seatStat.botId.delete(k),
-    insert: (r) => db.seatStat.insert(r as never),
-  }, "botId", now);
+  acc.market.flush<string>(
+    {
+      find: (k) => db.marketStat.key.find(k),
+      update: (r) => db.marketStat.key.update(r as never),
+      delete: (k) => db.marketStat.key.delete(k),
+      insert: (r) => db.marketStat.insert(r as never),
+    },
+    "key",
+    now,
+  );
+  acc.opp.flush<string>(
+    {
+      find: (k) => db.oppStat.key.find(k),
+      update: (r) => db.oppStat.key.update(r as never),
+      delete: (k) => db.oppStat.key.delete(k),
+      insert: (r) => db.oppStat.insert(r as never),
+    },
+    "key",
+    now,
+  );
+  acc.seat.flush<bigint>(
+    {
+      find: (k) => db.seatStat.botId.find(k),
+      update: (r) => db.seatStat.botId.update(r as never),
+      delete: (k) => db.seatStat.botId.delete(k),
+      insert: (r) => db.seatStat.insert(r as never),
+    },
+    "botId",
+    now,
+  );
 }
 
 // Recomputes the sums from d_* from scratch: recovery, or after changing the
@@ -502,25 +602,31 @@ export const rebuildStats = spacetimedb.reducer((ctx) => {
 
 // ---------- Fitted models (model.ts) ----------
 
-export const putBidModels = spacetimedb.reducer({ rows: t.array(bidModel.rowType) }, (ctx, { rows }) => {
-  requireWriter(ctx);
-  checkBatch(rows, 1_000);
-  const tb = ctx.db.bidModel;
-  for (const r of rows) {
-    checkText("params", r.params, MAX_PARAMS);
-    upsert(tb.botId, (x) => tb.insert(x), r.botId, r);
-  }
-});
+export const putBidModels = spacetimedb.reducer(
+  { rows: t.array(bidModel.rowType) },
+  (ctx, { rows }) => {
+    requireWriter(ctx);
+    checkBatch(rows, 1_000);
+    const tb = ctx.db.bidModel;
+    for (const r of rows) {
+      checkText("params", r.params, MAX_PARAMS);
+      upsert(tb.botId, (x) => tb.insert(x), r.botId, r);
+    }
+  },
+);
 
 // Drops the given fits, or every fit when botIds is empty (before a full
 // refit, so bots that no longer have data don't keep stale fits).
-export const deleteBidModels = spacetimedb.reducer({ botIds: t.array(t.u64()) }, (ctx, { botIds }) => {
-  requireWriter(ctx);
-  checkBatch(botIds);
-  const tb = ctx.db.bidModel;
-  const ids = botIds.length ? botIds : [...tb.iter()].map((r) => r.botId);
-  for (const id of ids) tb.botId.delete(id);
-});
+export const deleteBidModels = spacetimedb.reducer(
+  { botIds: t.array(t.u64()) },
+  (ctx, { botIds }) => {
+    requireWriter(ctx);
+    checkBatch(botIds);
+    const tb = ctx.db.bidModel;
+    const ids = botIds.length ? botIds : [...tb.iter()].map((r) => r.botId);
+    for (const id of ids) tb.botId.delete(id);
+  },
+);
 
 // ---------- K-13 telemetry (live bot, monitor) ----------
 
@@ -556,7 +662,9 @@ export const pruneEvents = spacetimedb.reducer({ before: t.timestamp() }, (ctx, 
   requireWriter(ctx);
   const tb = ctx.db.k13Event;
   const ids: bigint[] = [];
-  for (const r of tb.eventByAt.filter(new Range<Timestamp>({ tag: "unbounded" }, { tag: "excluded", value: before }))) {
+  for (const r of tb.eventByAt.filter(
+    new Range<Timestamp>({ tag: "unbounded" }, { tag: "excluded", value: before }),
+  )) {
     ids.push(r.id);
     if (ids.length >= 50_000) break;
   }
@@ -630,15 +738,18 @@ export const heartbeat = spacetimedb.reducer(
   },
 );
 
-export const setMeta = spacetimedb.reducer({ key: t.string(), value: t.string() }, (ctx, { key, value }) => {
-  requireWriter(ctx);
-  checkText("key", key, 200);
-  checkText("value", value, 1_000_000);
-  const tb = ctx.db.meta;
-  const row = { key, value, updatedAt: ctx.timestamp };
-  if (tb.key.find(key)) tb.key.update(row);
-  else tb.insert(row);
-});
+export const setMeta = spacetimedb.reducer(
+  { key: t.string(), value: t.string() },
+  (ctx, { key, value }) => {
+    requireWriter(ctx);
+    checkText("key", key, 200);
+    checkText("value", value, 1_000_000);
+    const tb = ctx.db.meta;
+    const row = { key, value, updatedAt: ctx.timestamp };
+    if (tb.key.find(key)) tb.key.update(row);
+    else tb.insert(row);
+  },
+);
 
 export const deleteMeta = spacetimedb.reducer({ key: t.string() }, (ctx, { key }) => {
   requireWriter(ctx);

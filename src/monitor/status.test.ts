@@ -3,8 +3,17 @@ import { test } from "node:test";
 import { styleOf, type SeatRow } from "./status.js";
 
 const seat = (matchId: number, botId: number, o: Partial<SeatRow> = {}): SeatRow => ({
-  matchId, botId, place: 1, score: 100, wonTiles: 10, paidTotal: 140, finalBalance: 20, words: 2, lettersPlayed: 12,
-  endedUs: matchId * 1_000_000, ...o,
+  matchId,
+  botId,
+  place: 1,
+  score: 100,
+  wonTiles: 10,
+  paidTotal: 140,
+  finalBalance: 20,
+  words: 2,
+  lettersPlayed: 12,
+  endedUs: matchId * 1_000_000,
+  ...o,
 });
 
 test("styleOf: per-match tiles, price, word length, 7+ words over the most recent matches", () => {
@@ -14,7 +23,11 @@ test("styleOf: per-match tiles, price, word length, 7+ words over the most recen
     seat(3, 7, { wonTiles: 100, place: 6 }),
     seat(2, 9),
   ];
-  const sevens = new Map([["1|7", 1], ["2|7", 2], ["3|7", 5]]);
+  const sevens = new Map([
+    ["1|7", 1],
+    ["2|7", 2],
+    ["3|7", 5],
+  ]);
   const all = styleOf(7, "x", seats, sevens, 10);
   assert.equal(all.matches, 3);
   assert.equal(all.tiles, (8 + 12 + 100) / 3);
@@ -33,13 +46,33 @@ test("styleOf: per-match tiles, price, word length, 7+ words over the most recen
 test("tournamentView: picks the open tournament, server standing order, Damo's matches and final difference", async () => {
   const { tournamentView } = await import("./status.js");
   const tour = (id: number, status: string) => ({
-    id, status, swissRoundsTotal: 3, currentRound: 2, topCut: 2, matchSize: 6, auctionType: "Vickrey", createdUs: id, endedUs: null, winnerBotId: null,
+    id,
+    status,
+    swissRoundsTotal: 3,
+    currentRound: 2,
+    topCut: 2,
+    matchSize: 6,
+    auctionType: "Vickrey",
+    createdUs: id,
+    endedUs: null,
+    winnerBotId: null,
   });
   const entry = (tournamentId: number, botId: number, swissPoints: number, totalScore: number) => ({
-    tournamentId, botId, swissPoints, eliminated: false, totalScore, finalFinishPosition: null,
+    tournamentId,
+    botId,
+    swissPoints,
+    eliminated: false,
+    totalScore,
+    finalFinishPosition: null,
   });
   const tours = [tour(1, "Ended"), tour(2, "Final")];
-  const entries = [entry(2, 5, 9, 300), entry(2, 13, 9, 310), entry(2, 4, 9, 300), entry(2, 8, 2, 500), entry(1, 13, 0, 0)];
+  const entries = [
+    entry(2, 5, 9, 300),
+    entry(2, 13, 9, 310),
+    entry(2, 4, 9, 300),
+    entry(2, 8, 2, 500),
+    entry(1, 13, 0, 0),
+  ];
   const tms = [
     { tournamentId: 2, matchId: 50, round: 1, phase: "Swiss" },
     { tournamentId: 2, matchId: 60, round: 1, phase: "Final" },
@@ -47,14 +80,29 @@ test("tournamentView: picks the open tournament, server standing order, Damo's m
     { tournamentId: 1, matchId: 10, round: 1, phase: "Swiss" },
   ];
   const parts = [
-    { matchId: 50, botId: 13, score: 90 }, { matchId: 50, botId: 5, score: 95 }, { matchId: 50, botId: 4, score: 90 },
-    { matchId: 60, botId: 13, score: 100 }, { matchId: 60, botId: 5, score: 80 },
-    { matchId: 61, botId: 13, score: 70 }, { matchId: 61, botId: 5, score: 75 },
+    { matchId: 50, botId: 13, score: 90 },
+    { matchId: 50, botId: 5, score: 95 },
+    { matchId: 50, botId: 4, score: 90 },
+    { matchId: 60, botId: 13, score: 100 },
+    { matchId: 60, botId: 5, score: 80 },
+    { matchId: 61, botId: 13, score: 70 },
+    { matchId: 61, botId: 5, score: 75 },
   ];
-  const v = tournamentView(tours, entries, tms, parts, new Set([50, 60]), 13, new Map([[13, "Damo"]]))!;
+  const v = tournamentView(
+    tours,
+    entries,
+    tms,
+    parts,
+    new Set([50, 60]),
+    13,
+    new Map([[13, "Damo"]]),
+  )!;
   assert.equal(v.tournament.id, 2);
   assert.equal(v.active, true);
-  assert.deepEqual(v.standings.map((e) => e.botId), [13, 4, 5, 8]); // points, then total, then lower id
+  assert.deepEqual(
+    v.standings.map((e) => e.botId),
+    [13, 4, 5, 8],
+  ); // points, then total, then lower id
   assert.equal(v.me?.rank, 1);
   assert.equal(v.myMatches.length, 3);
   assert.equal(v.myMatches[0]!.place, 2); // one bot strictly ahead; the tie does not count

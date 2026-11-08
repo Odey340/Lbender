@@ -54,12 +54,18 @@ test("unseen pool: bag minus auctioned, my start and revealed opponent tiles", (
 });
 
 test("belief updates incrementally and resets on a new match", () => {
-  const h: PublicEvent[] = [{ kind: "auction", auctionId: 1, letter: "Q", winnerBotId: 3, paid: 9 }];
+  const h: PublicEvent[] = [
+    { kind: "auction", auctionId: 1, letter: "Q", winnerBotId: 3, paid: 9 },
+  ];
   const b = new Belief();
   const v1 = view(h, "ABCDE", 70);
   b.update(v1);
   assert.equal(b.auctions, 1);
-  const v2 = view([...h, { kind: "auction", auctionId: 2, letter: "Z", winnerBotId: 2, paid: 30 }], "ABCDE", 69);
+  const v2 = view(
+    [...h, { kind: "auction", auctionId: 2, letter: "Z", winnerBotId: 2, paid: 30 }],
+    "ABCDE",
+    69,
+  );
   b.update(v2);
   assert.equal(b.auctions, 2);
   assert.deepEqual(b.opponent(2).known, countsOf("Z"));

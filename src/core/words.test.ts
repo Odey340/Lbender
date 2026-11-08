@@ -157,10 +157,41 @@ test("reward math matches the server", () => {
 
 test("isWord matches the server's isValidWord", () => {
   const cases = [
-    "AA", "aa", "Aa", "cat", "CAT", "QUIZ", "quiz", "RETAINS", "ZYZZYVAS",
-    "QI", "ZA", "A", "a", "", " ", "CA T", "CAT ", " CAT", "CAT1", "CAFÉ", "café",
-    "ß", "STRAßE", "ıT", "İT", "ﬁ", "CAT\n", "CAT\r", "\u0000AA", "AA\u0000", "XQZT",
-    "AAH", "AAHED", "ZYZZYVA", "ZZZ",
+    "AA",
+    "aa",
+    "Aa",
+    "cat",
+    "CAT",
+    "QUIZ",
+    "quiz",
+    "RETAINS",
+    "ZYZZYVAS",
+    "QI",
+    "ZA",
+    "A",
+    "a",
+    "",
+    " ",
+    "CA T",
+    "CAT ",
+    " CAT",
+    "CAT1",
+    "CAFÉ",
+    "café",
+    "ß",
+    "STRAßE",
+    "ıT",
+    "İT",
+    "ﬁ",
+    "CAT\n",
+    "CAT\r",
+    "\u0000AA",
+    "AA\u0000",
+    "XQZT",
+    "AAH",
+    "AAHED",
+    "ZYZZYVA",
+    "ZZZ",
   ];
   for (const w of cases) assert.equal(engine.isWord(w), serverIsValidWord(w), JSON.stringify(w));
   assert.equal(engine.isWord("QI"), false, "QI is not in this list");
@@ -222,19 +253,49 @@ test("serverBestPlayable is an exact replica of findBestPlayable", () => {
     const rack = randomRack(rand, size);
     const minLen = [3, 3, 3, 2, 4, 5, 1, 0][i % 8]!;
     const expect = serverFindBestPlayable(rackMap(rack), minLen);
-    assert.equal(engine.serverBestPlayable(rack, minLen), expect, `${rackString(rack)} min ${minLen}`);
+    assert.equal(
+      engine.serverBestPlayable(rack, minLen),
+      expect,
+      `${rackString(rack)} min ${minLen}`,
+    );
     assert.equal(engine.serverBestPlayable(rackMap(rack), minLen), expect);
   }
   // Map quirks: only single A-Z keys count.
-  const quirky = new Map<string, number>([["C", 1], ["A", 1], ["T", 1], ["a", 5], ["?", 5], ["SS", 2]]);
+  const quirky = new Map<string, number>([
+    ["C", 1],
+    ["A", 1],
+    ["T", 1],
+    ["a", 5],
+    ["?", 5],
+    ["SS", 2],
+  ]);
   assert.equal(engine.serverBestPlayable(quirky, 3), serverFindBestPlayable(quirky, 3));
   assert.equal(engine.serverBestPlayable(new Map(), 2), undefined);
   // Fractional and negative counts behave as they do on the server.
   for (const m of [
-    new Map([["Q", 1], ["I", 1], ["A", 1.5], ["T", 1]]),
-    new Map([["C", 1], ["A", 1], ["T", 1], ["S", -1]]),
-    new Map([["E", 2.5], ["T", 1], ["A", 1]]),
-    new Map([["C", 1], ["A", 1], ["T", 1], ["Z", NaN]]),
+    new Map([
+      ["Q", 1],
+      ["I", 1],
+      ["A", 1.5],
+      ["T", 1],
+    ]),
+    new Map([
+      ["C", 1],
+      ["A", 1],
+      ["T", 1],
+      ["S", -1],
+    ]),
+    new Map([
+      ["E", 2.5],
+      ["T", 1],
+      ["A", 1],
+    ]),
+    new Map([
+      ["C", 1],
+      ["A", 1],
+      ["T", 1],
+      ["Z", NaN],
+    ]),
   ]) {
     for (const minLen of [0, 2, 2.5, 3, NaN]) {
       assert.equal(engine.serverBestPlayable(m, minLen), serverFindBestPlayable(m, minLen));
@@ -259,7 +320,11 @@ test("bestPartition is optimal on small racks", () => {
     const label = `${rackString(rack)} maxWords ${maxWords} minLen ${minLen}`;
     assert.equal(p.optimal, true, label);
     assert.equal(p.total, total, label);
-    assert.equal(p.words.reduce((s, w) => s + w.length, 0), tiles, `${label}: fewest tiles`);
+    assert.equal(
+      p.words.reduce((s, w) => s + w.length, 0),
+      tiles,
+      `${label}: fewest tiles`,
+    );
     if (maxWords !== undefined) assert.ok(p.words.length <= maxWords);
     if (minLen !== undefined) assert.ok(p.words.every((w) => w.length >= minLen));
   }

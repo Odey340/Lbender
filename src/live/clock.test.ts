@@ -19,13 +19,36 @@ test("sanitizeBid: only integers in [0, balance] reach the server", () => {
 test("budget: time to the send deadline minus the margin", () => {
   // Auction opened at 0 server time, closes at 1000. Received at local 90
   // with clocks in sync, 45 ms uplink, 250 ms margin: 1000 - 45 - 90 - 250.
-  const b = refineBudgetMs({ closesAtServerMs: 1000, nowLocalMs: 90, offsetMs: 0, oneWayMs: 45, safetyMarginMs: 250 });
+  const b = refineBudgetMs({
+    closesAtServerMs: 1000,
+    nowLocalMs: 90,
+    offsetMs: 0,
+    oneWayMs: 45,
+    safetyMarginMs: 250,
+  });
   assert.equal(b, 615);
   assert.equal(sendDeadlineLocal(1000, 0, 45), 955);
   // Local clock 30 ms behind the server (offset -30): the deadline comes sooner locally.
-  assert.equal(refineBudgetMs({ closesAtServerMs: 1000, nowLocalMs: 60, offsetMs: -30, oneWayMs: 45, safetyMarginMs: 250 }), 615);
+  assert.equal(
+    refineBudgetMs({
+      closesAtServerMs: 1000,
+      nowLocalMs: 60,
+      offsetMs: -30,
+      oneWayMs: 45,
+      safetyMarginMs: 250,
+    }),
+    615,
+  );
   // Arrived late: no time to think.
-  assert.ok(refineBudgetMs({ closesAtServerMs: 1000, nowLocalMs: 800, offsetMs: 0, oneWayMs: 45, safetyMarginMs: 250 }) < 0);
+  assert.ok(
+    refineBudgetMs({
+      closesAtServerMs: 1000,
+      nowLocalMs: 800,
+      offsetMs: 0,
+      oneWayMs: 45,
+      safetyMarginMs: 250,
+    }) < 0,
+  );
 });
 
 test("clock: defaults before any sample", () => {

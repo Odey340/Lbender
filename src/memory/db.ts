@@ -178,11 +178,16 @@ export function openDb(dbPath: string = DEFAULT_DB_PATH, opts: OpenOptions = {})
 }
 
 // Columns added after a table first shipped: add them to older files.
-const ADDED_COLUMNS: [table: string, column: string, type: string][] = [["auction_ctx", "sim_q", "REAL"]];
+const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
+  ["auction_ctx", "sim_q", "REAL"],
+];
 
 function migrate(db: Db): void {
   for (const [table, column, type] of ADDED_COLUMNS) {
-    const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((r) => String(r.name));
+    const cols = db
+      .prepare(`PRAGMA table_info(${table})`)
+      .all()
+      .map((r) => String(r.name));
     if (!cols.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   }
 }

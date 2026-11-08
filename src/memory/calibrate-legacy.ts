@@ -132,13 +132,29 @@ export function policyFromHabits(h: PlayHabits): PlayPolicy {
   const target =
     big.length >= 10
       ? Math.max(4, Math.min(8, Math.round(median(big))))
-      : Math.max(3, quantileOf([...h.plays.map((p) => p.len)].sort((a, b) => a - b), 0.75));
+      : Math.max(
+          3,
+          quantileOf(
+            [...h.plays.map((p) => p.len)].sort((a, b) => a - b),
+            0.75,
+          ),
+        );
   // Before the endgame, with a small rack: how much of it does it clear,
   // and how short a word will it settle for?
   const mid = h.plays.filter((p) => p.rack <= 7 && p.len < target && p.phase < 0.85);
   const useMid = mid.length / matches >= 0.4;
-  const slack = useMid ? Math.max(0, Math.min(3, Math.round(median(mid.map((p) => p.rack - p.len))))) : -1;
-  const midLen = useMid ? Math.max(2, quantileOf(mid.map((p) => p.len).sort((a, b) => a - b), 0.5)) : 99;
+  const slack = useMid
+    ? Math.max(0, Math.min(3, Math.round(median(mid.map((p) => p.rack - p.len)))))
+    : -1;
+  const midLen = useMid
+    ? Math.max(
+        2,
+        quantileOf(
+          mid.map((p) => p.len).sort((a, b) => a - b),
+          0.5,
+        ),
+      )
+    : 99;
   const late = h.plays.filter((p) => p.phase >= 0.9).length;
   return {
     target,
@@ -207,7 +223,10 @@ export class RankAllocator {
   }
 }
 
-export function createLegacyCloneAgent(botId: number, opts: { seed?: number; model?: OpponentModel; rackAware?: number } = {}): Agent {
+export function createLegacyCloneAgent(
+  botId: number,
+  opts: { seed?: number; model?: OpponentModel; rackAware?: number } = {},
+): Agent {
   const m = opts.model ?? model();
   const rng = rng32(opts.seed ?? botId * 7919 + 17);
   const ranks = new RankAllocator(opts.rackAware ?? 1);

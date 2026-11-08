@@ -12,10 +12,12 @@ import { WRITER_TOKEN_PATH, connectBackend } from "./client.js";
 
 const args = process.argv.slice(2);
 const outIdx = args.indexOf("--out");
-const out = outIdx >= 0 ? args[outIdx + 1] ?? WRITER_TOKEN_PATH : WRITER_TOKEN_PATH;
+const out = outIdx >= 0 ? (args[outIdx + 1] ?? WRITER_TOKEN_PATH) : WRITER_TOKEN_PATH;
 
 if (existsSync(out) && !args.includes("--force")) {
-  console.error(`${out} exists; pass --force to replace it (the old identity stays allow-listed until removed)`);
+  console.error(
+    `${out} exists; pass --force to replace it (the old identity stays allow-listed until removed)`,
+  );
   process.exit(1);
 }
 
