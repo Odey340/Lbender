@@ -61,6 +61,17 @@ export async function loadAgent(
 
   if (name === "starter")
     return { agent: new StarterAgent(), requested: name, fallback: false, notes };
+
+  if (name === "lbender") {
+    try {
+      const mod = await tryImport("../lbender/agent.js");
+      const create = mod?.createLbenderAgent as (() => Agent) | undefined;
+      if (!create) return fallback("src/lbender/agent.ts missing or has no createLbenderAgent");
+      return { agent: create(), requested: name, fallback: false, notes };
+    } catch (e) {
+      return fallback(`LBender agent failed to load: ${errMsg(e)}`);
+    }
+  }
   if (name === "timing-probe")
     return { agent: new TimingProbeAgent(), requested: name, fallback: false, notes };
 
