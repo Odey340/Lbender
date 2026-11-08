@@ -16,6 +16,18 @@ Built on **K-13**, the Cal Hacks ScrabbleBot tournament #1 champion · Runs on C
 
 ---
 
+## Experimental independent strategy
+
+The default `palace` agent and the historical Damo implementation described
+below are derived from K-13. A separate experimental agent is being developed
+under `src/lbender/` on the `lbender-independent-strategy` branch. It can be
+selected with `npm run bot:lbender`. It is a new heuristic prototype, not a
+replacement for the legacy engine, and has not yet been benchmarked for
+competitive strength or live-deadline safety. See
+[`src/lbender/README.md`](src/lbender/README.md) for its design and limits.
+
+---
+
 ## Contents
 
 1. [Where Damo comes from](#-where-damo-comes-from)
