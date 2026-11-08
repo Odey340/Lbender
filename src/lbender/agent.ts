@@ -1,136 +1,199 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
 import {
   canSpell,
-  emptyCounts,
   idx,
   totalTiles,
-  wordReward,
   type Counts,
 } from "../core/rules.js";
-import type { Agent, AuctionView, MatchView } from "../core/types.js";
+import { getWordEngine } from "../core/words.js";
+import type { Agent, AuctionView, MatchView, PublicEvent } from "../core/types.js";
 import { evaluateLetterOptions } from "./valuation.js";
 
-const WORDLIST_PATH = path.join(import.meta.dirname, "..", "..", "data", "wordlist.txt");
-
-let dictionary: string[] | undefined;
-function words(): string[] {
-  if (dictionary) return dictionary;
-  dictionary = fs
-    .readFileSync(WORDLIST_PATH, "utf8")
-    .replace(/\r/g, "")
-    .split("\n")
-    .filter((word) => word.length >= 2 && /^[A-Z]+$/.test(word));
-  return dictionary;
+function clamp(x: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, x));
 }
-
-function rackKey(rack: Counts): string {
-  return rack.join(",");
+function median(xs: number[]): number {
+  if (!xs.length) return 0;
+  const a = [...xs].sort((x, y) => x - y);
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m]! : (a[m - 1]! + a[m]!) / 2;
 }
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.max(low, Math.min(high, value));
+function quantile(xs: number[], q: number): number {
+  if (!xs.length) return 0;
+  const a = [...xs].sort((x, y) => x - y);
+  return a[Math.min(a.length - 1, Math.floor((a.length - 1) * q))]!;
 }
-
-interface PlayableWord {
-  word: string;
-  reward: number;
-}
-
-function playableWords(rack: Counts): PlayableWord[] {
-  const out: PlayableWord[] = [];
-  const size = totalTiles(rack);
-  for (const word of words()) {
-    if (word.length > size || !canSpell(word, rack)) continue;
-    out.push({ word, reward: wordReward(word) });
-  }
-  out.sort(
-    (a, b) =>
-      b.reward - a.reward ||
-      b.word.length - a.word.length ||
-      (a.word < b.word ? -1 : a.word > b.word ? 1 : 0),
-  );
+function subtractWord(rack: Counts, word: string): Counts {
+  const out = rack.slice();
+  for (let i = 0; i < word.length; i++) out[idx(word[i]!)]!--;
   return out;
 }
 
+interface MarketSample {
+  prices: number[];
+  byOpponent: Map<number, number[]>;
+}
+function marketSamples(view: MatchView): MarketSample {
+  const prices: number[] = [];
+  const byOpponent = new Map<number, number[]>();
+  for (const event of view.history as PublicEvent[]) {
+    if (event.kind !== "auction" || event.winnerBotId === null || event.winnerBotId === view.myBotId) continue;
+    // In Vickrey this is the runner-up/clearing price; in FirstPrice it is
+    // the winner's paid bid. Treat Vickrey values as market thresholds, not
+    // as an observation of the winner's private willingness to pay.
+    if (event.paid < 0) continue;
+    prices.push(event.paid);
+    const xs = byOpponent.get(event.winnerBotId) ?? [];
+    xs.push(event.paid);
+    byOpponent.set(event.winnerBotId, xs);
+  }
+  return { prices, byOpponent };
+}
+
 /**
- * LBender's first independent strategy:
- * - dictionary completion and rack flexibility for letter valuation;
- * - a transparent budget-per-expected-win coin shadow price;
- * - conservative shading in first-price auctions;
- * - long-word preservation with a simple endgame/low-cash release rule.
- *
- * This deliberately does not import the K-13 brain, simulator, market model,
- * sampled-future valuation, or fitted K-13 parameters.
+ * Independent LBender strategy.
+ * Auction pricing uses observed market-clearing prices; Vickrey bidding stays
+ * value-oriented while FirstPrice bids shade toward an empirical price
+ * quantile. Opponent history is used conservatively because Vickrey paid
+ * amounts reveal the runner-up, not the winner's actual bid.
  */
 export class LbenderAgent implements Agent {
   readonly name = "lbender";
   private cachedRack = "";
   private cachedValues: number[] = [];
 
-  private letterValues(rack: Counts): number[] {
-    const key = rackKey(rack);
+  private values(rack: Counts): number[] {
+    const key = rack.join(",");
     if (key !== this.cachedRack) {
-      this.cachedValues = evaluateLetterOptions(rack, words());
+      this.cachedValues = evaluateLetterOptions(rack);
       this.cachedRack = key;
     }
     return this.cachedValues;
   }
-
   private balance(view: MatchView): number {
     return view.participants.find((p) => p.botId === view.myBotId)?.balance ?? 0;
+  }
+  private coinShadow(view: MatchView): number {
+    const me = this.balance(view);
+    const auctionsLeft = Math.max(0, view.bagTotal);
+    if (auctionsLeft <= 1) return 0.08; // coins expire at match end
+    const seats = Math.max(2, view.participants.length);
+    const expectedFutureWins = Math.max(1, auctionsLeft / seats);
+    const futureIncome = view.history.reduce((sum, e) =>
+      e.kind === "word" && e.botId === view.myBotId ? sum + e.reward : sum, 0);
+    const spendable = me + Math.min(futureIncome * 0.25, me * 0.5);
+    return clamp(7 / Math.max(1, spendable / expectedFutureWins), 0.12, 1.8);
   }
 
   quickBid(view: MatchView, auction: AuctionView): number {
     const balance = Math.max(0, Math.floor(this.balance(view)));
-    if (balance <= 0) return 0;
-
+    if (!balance || view.bagTotal <= 0) return 0;
     const letter = idx(auction.letter);
     if (letter < 0 || letter >= 26) return 0;
+    const value = this.values(view.myRack)[letter] ?? 0;
+    if (value <= 0) return 0;
 
-    const potential = this.letterValues(view.myRack)[letter] ?? 0;
-    if (!(potential > 0)) return 0;
+    const shadow = this.coinShadow(view);
+    const samples = marketSamples(view);
+    const enoughData = samples.prices.length >= 5;
+    const marketMedian = median(samples.prices);
+    const marketP75 = quantile(samples.prices, 0.75);
+    const fairValue = value / shadow;
 
-    // Reserve a roughly equal share of the current balance for each expected
-    // future win. Six seats are common, but tournament tables can be larger.
-    const seats = Math.max(2, view.participants.length);
-    const auctionsLeft = Math.max(1, view.bagTotal + 1);
-    const expectedWins = Math.max(0.75, auctionsLeft / seats);
-    const budgetPerWin = balance / expectedWins;
+    if (view.auctionType === "Vickrey") {
+      // Truthful value is the baseline; a modest market-informed denial
+      // premium is allowed only when the market has a meaningful sample.
+      const denial = enoughData ? Math.min(fairValue * 0.12, marketMedian * 0.25) : 0;
+      return Math.floor(clamp(fairValue + denial, 0, balance));
+    }
 
-    // A transparent shadow price: a typical useful tile is valued at about
-    // six score points. Clamp it so early/late-game estimates stay bounded.
-    const pointsPerCoin = clamp(6 / Math.max(1, budgetPerWin), 0.18, 1.5);
-    const firstPriceShade = view.auctionType === "FirstPrice" ? 0.72 : 1;
-    const rawBid = (potential / pointsPerCoin) * firstPriceShade;
-    const perAuctionLimit = Math.max(1, Math.ceil(budgetPerWin * 2.5));
-    return clamp(Math.floor(rawBid), 0, Math.min(balance, perAuctionLimit));
+    // First-price: don't pay our full private value. Use recent market
+    // clearing prices to shade toward the upper quartile, bounded by value.
+    const target = enoughData ? Math.max(marketMedian, marketP75 * 0.85) : fairValue * 0.62;
+    return Math.floor(clamp(Math.min(fairValue * 0.92, target), 0, balance));
   }
 
-  refineBid(_view: MatchView, _auction: AuctionView, _budgetMs: number): number | null {
-    // The independent policy is deterministic; no second-pass search needed.
-    return null;
+  refineBid(view: MatchView, auction: AuctionView, budgetMs: number): number | null {
+    const balance = Math.max(0, Math.floor(this.balance(view)));
+    if (!balance || view.bagTotal <= 0) return 0;
+    const letter = idx(auction.letter);
+    if (letter < 0 || letter >= 26) return 0;
+    const value = (this.values(view.myRack)[letter] ?? 0) / this.coinShadow(view);
+    if (value <= 0) return 0;
+
+    const samples = marketSamples(view);
+    if (samples.prices.length < 4) return null;
+    const deadline = performance.now() + Math.max(1, Math.min(12, budgetMs));
+    const maxBid = Math.min(balance, Math.ceil(value * 1.15));
+    let bestBid = this.quickBid(view, auction);
+    let bestUtility = -Infinity;
+    // Empirical discrete expected-utility search. For Vickrey, payment is the
+    // observed clearing price; for FirstPrice, payment is our submitted bid.
+    for (let bid = 0; bid <= maxBid; bid++) {
+      if (performance.now() > deadline) break;
+      let wins = 0;
+      let payment = 0;
+      for (const price of samples.prices) {
+        if (bid > price) {
+          wins++;
+          payment += view.auctionType === "Vickrey" ? price : bid;
+        }
+      }
+      const p = wins / samples.prices.length;
+      const avgPay = wins ? payment / wins : 0;
+      const utility = p * (value - avgPay);
+      if (utility > bestUtility) {
+        bestUtility = utility;
+        bestBid = bid;
+      }
+    }
+    return clamp(bestBid, 0, balance);
   }
 
   chooseWords(view: MatchView): string[] {
-    const candidates = playableWords(view.myRack);
-    if (candidates.length === 0) return [];
+    const engine = getWordEngine();
+    const rack = view.myRack.slice();
+    const size = totalTiles(rack);
+    if (size < 2) return [];
+    const me = view.participants.find((p) => p.botId === view.myBotId);
+    const balance = me?.balance ?? 0;
+    const bag = view.bagTotal;
+    const best = engine.best(rack);
+    if (!best) return [];
 
-    const best = candidates[0]!;
-    const balance = this.balance(view);
-    const endgame = view.bagTotal <= 1;
-    const needsCash = balance <= 14 && view.bagTotal <= 10 && best.word.length >= 5;
-    if (!endgame && !needsCash && best.word.length < 7) return [];
+    const endgame = bag <= 1;
+    const cashPressure = balance <= 22 && bag <= 18;
+    const crowdedRack = size >= 9;
+    const behind = view.participants.some(
+      (p) => p.botId !== view.myBotId && p.score > (me?.score ?? 0) + 12,
+    );
 
-    const remaining = view.myRack.slice();
+    // Exact best partition in the final window. Earlier, prefer high-value
+    // words but cash shorter words when coins are scarce or the rack is full.
+    if (endgame) return engine.bestPartition(rack, { timeBudgetMs: 12 }).words;
+
     const chosen: string[] = [];
-    for (const candidate of candidates) {
-      if (chosen.length >= 3) break;
-      if (!canSpell(candidate.word, remaining)) continue;
-      chosen.push(candidate.word);
-      for (let i = 0; i < candidate.word.length; i++) {
-        remaining[candidate.word.charCodeAt(i) - 65]!--;
+    let remaining = rack;
+    for (let n = 0; n < 3; n++) {
+      const candidates = engine.topK(remaining, 24);
+      if (!candidates.length) break;
+      const candidate = candidates.find((w) => {
+        if (w.word.length >= 6) return true;
+        if (w.word.length === 5) return true;
+        if (w.word.length === 4) return cashPressure || crowdedRack || behind;
+        return cashPressure && (crowdedRack || behind) && w.word.length >= 3;
+      });
+      if (!candidate) break;
+
+      // Preserve a short word only if it can plausibly be extended; otherwise
+      // bank its points/coins now. A high-scoring immediate word is never
+      // suppressed solely because it is shorter than seven letters.
+      if (candidate.word.length <= 4 && !cashPressure && !crowdedRack && !behind) {
+        const after = subtractWord(remaining, candidate.word);
+        const futureBest = engine.bestReward(after);
+        if (futureBest >= candidate.reward * 1.35) break;
       }
+      chosen.push(candidate.word);
+      remaining = subtractWord(remaining, candidate.word);
     }
     return chosen;
   }
@@ -139,5 +202,3 @@ export class LbenderAgent implements Agent {
 export function createLbenderAgent(): Agent {
   return new LbenderAgent();
 }
-
-export { emptyCounts };
