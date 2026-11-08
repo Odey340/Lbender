@@ -1,6 +1,7 @@
 # K-13 backend (SpacetimeDB)
 
 Everything stateful K-13 keeps lives in its own SpacetimeDB database `k13`,
+
 on a dedicated local SpacetimeDB server (`k13-stdb.service`, 127.0.0.1:3013). That
 covers the mirrored public game history, the facts derived from it, the
 module-maintained sums, the fitted bid models, and the live bot's telemetry.
