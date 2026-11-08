@@ -1,39 +1,54 @@
 # LBender experimental strategy
 
-This directory contains a new, separately implemented strategy prototype. It is
-registered as `--agent lbender` and does not import the legacy `src/brain`,
-`src/memory`, or `src/sim` modules.
+This directory contains a separately implemented strategy prototype. It is
+registered as `--agent lbender` and does not import the legacy
+`src/brain`, `src/memory`, or `src/sim` strategy modules.
 
-## Design
+## Current design
 
-- **Dictionary completion value:** scans the official game dictionary for words
-  one to three tiles away from the current rack. A missing letter is valued by
-  the best immediate completion plus discounted two- and three-tile options.
-- **Budget pacing:** converts the current balance into a rough per-win budget
-  based on auctions remaining and table size.
-- **Auction behavior:** caps bids by balance and a per-auction budget; shades
-  bids in first-price auctions.
-- **Word timing:** preserves short playable words in ordinary rounds, releases
-  longer words when the rack can form a 7+ letter word, and cashes out near the
-  end or when low on coins.
+- **Indexed rack valuation:** queries the shared anagram-trie word engine for
+  marginal best-word reward and a small flexibility bonus for each possible
+  incoming letter. This avoids scanning the entire dictionary on every bid.
+- **Budget pacing:** prices coins against expected future opportunities and
+  lets coin value fall near the end, when unspent balance has little value.
+- **Market-aware auctions:** uses public clearing-price history as a market
+  signal. Vickrey prices are treated as runner-up thresholds, not mistaken for
+  winners' private bids. First-price bidding shades toward observed market
+  prices while staying below estimated private value.
+- **Refinement:** searches a bounded set of integer bids against observed
+  market samples. The quick bid is sent first; refinement is capped to a small
+  slice of the optional think budget.
+- **Active word play:** considers high-reward words of five or more letters
+  throughout the match, with shorter words available when cash, rack space,
+  score position, or endgame timing make playing now more valuable.
+- **Endgame:** uses the existing exact rack partition engine with a short time
+  budget to cash out playable words.
 
-## Deliberate limitations
+## Offline evaluation
 
-This is a first heuristic baseline, not a tournament-proven replacement for
-the legacy strategy. It does not yet learn individual opponents, estimate
-uncertainty, simulate full matches, or optimize parameters from paired trials.
-The dictionary scan is synchronous and must be profiled against the live
-auction deadline before deployment. The current valuation coefficients are
-hand-selected and require empirical tuning.
-
-## Run
+The simulator accepts `lbender` as a seat:
 
 ```sh
 npm run typecheck
-npm run test:lbender
-npm run bot:lbender -- --dry-run
+npm test
+npm run sim -- --games 500 --swap --table "lbender,starter,sim:Cheapskate,sim:ValueBidder,sim:Aggressive,sim:ValueBidder"
+npm run sim -- --games 500 --swap --first-price --table "lbender,starter,sim:Cheapskate,sim:ValueBidder,sim:Aggressive,sim:ValueBidder"
 ```
 
-The repository's default bot remains unchanged. The root README and
-`THIRD_PARTY_NOTICES.md` continue to describe the legacy implementation and
-its provenance. This prototype is not a rewrite of that legacy codebase.
+Compare LBender against the same opponents and seeds before/after any tuning.
+Track win rate, mean score/place, coins remaining, tiles remaining, words
+played, rejections, exceptions, and decision latency. Use paired `--swap`
+runs and more than one seed; one match is not evidence of an improvement.
+
+## Limitations
+
+This is a heuristic baseline, not a proven top-performing strategy. The
+market estimator uses public outcomes and has limited samples early in a
+match; Vickrey clearing prices do not reveal the winning bid. Its empirical
+bid search is intentionally simple and does not reconstruct hidden private
+opponent bids. The hand-selected coefficients require benchmark-driven tuning.
+Live latency and the live server's exact tie behavior should be checked before
+competitive deployment.
+
+The repository's legacy Palace/Damo strategy and its K-13 provenance remain
+separate and are documented in the root README and `THIRD_PARTY_NOTICES.md`.
